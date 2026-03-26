@@ -4,6 +4,7 @@ import { Header, Sidebar, JornadaFilter, TorneoFilter, Loading, ErrorState } fro
 import ColectivoPanel from './components/ColectivoPanel'
 import IndividualPanel from './components/IndividualPanel'
 import { RecuperacionesPanel, BalonesPanel, DuelosPanel, FisicoPanel } from './components/AnalysisPanels'
+import PerfilPanel from './components/PerfilPanel'
 import Login from './components/Login'
 
 function Dashboard() {
@@ -111,6 +112,7 @@ function Dashboard() {
   const panels = {
     colectivo:      <ColectivoPanel D={filteredD(D)} labels={activeLabels} PL={PL} jornadaLabel={badge} />,
     individual:     <IndividualPanel PL={PL} labels={activeLabels} allJornadas={jornadasFiltered} />,
+    perfil:         <PerfilPanel PL={PL} raw={raw} labels={activeLabels} activeTorneos={effectiveTorneos} allJornadas={jornadasFiltered} />,
     recuperaciones: <RecuperacionesPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,
     balones:        <BalonesPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,
     duelos:         <DuelosPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,
@@ -127,6 +129,7 @@ function Dashboard() {
             <div>
               <div className="ptitle">{{
                 colectivo: 'Informe Colectivo', individual: 'Informe Individual',
+                perfil: 'Perfil del Jugador',
                 recuperaciones: 'Recuperaciones', balones: 'Balones Perdidos',
                 duelos: 'Duelos', fisico: 'Físico'
               }[current]}</div>

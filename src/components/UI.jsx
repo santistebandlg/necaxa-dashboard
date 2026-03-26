@@ -25,6 +25,7 @@ export function Sidebar({ open, current, onNav }) {
   const items = [
     { id: 'colectivo',      icon: '📋', label: 'Colectivo',       group: 'Informes' },
     { id: 'individual',     icon: '👤', label: 'Individual',      group: 'Informes' },
+    { id: 'perfil',         icon: '🪪', label: 'Perfil',          group: 'Informes' },
     { id: 'recuperaciones', icon: '🔄', label: 'Recuperaciones',  group: 'Análisis' },
     { id: 'balones',        icon: '❌', label: 'Balones Perdidos', group: 'Análisis' },
     { id: 'duelos',         icon: '⚔️', label: 'Duelos',          group: 'Análisis' },
