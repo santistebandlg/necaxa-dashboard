@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 
 const PASSWORDS = {
-  directiva:     'necaxa2026',
-  cuerpo_tecnico: 'rayos2026',
+  directiva:     'FuerzaRayo$',
+  cuerpo_tecnico: 'MartinVarini',
 }
 
 export default function Login({ onLogin }) {
