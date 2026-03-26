@@ -7,8 +7,7 @@ import { RecuperacionesPanel, BalonesPanel, DuelosPanel, FisicoPanel } from './c
 import Login from './components/Login'
 
 export default function App() {
-  const savedRole = sessionStorage.getItem('necaxa_role')
-  const [role, setRole] = useState(savedRole || null)
+  const [role, setRole] = useState(() => sessionStorage.getItem('necaxa_role') || null)
 
   if (!role) return <Login onLogin={setRole} />
   const { status, jornadas, D, PL, raw, error, reload } = useSheetData()

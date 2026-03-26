@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 
 const PASSWORDS = {
-  directiva:     'FuerzaRayo$',
-  cuerpo_tecnico: 'MartinVarini',
+  directiva:     'necaxa2026',
+  cuerpo_tecnico: 'rayos2026',
 }
 
 export default function Login({ onLogin }) {
@@ -61,6 +61,7 @@ export default function Login({ onLogin }) {
           <div style={{ position: 'relative' }}>
             <input
               type="password"
+              autoComplete="current-password"
               placeholder="Contraseña"
               value={password}
               onChange={e => { setPassword(e.target.value); setError('') }}
