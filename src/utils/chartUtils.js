@@ -2,10 +2,11 @@ import {
   Chart as ChartJS,
   CategoryScale, LinearScale,
   BarElement, LineElement, PointElement,
+  BarController, LineController,
   Tooltip, Legend, Filler,
 } from 'chart.js'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip, Legend, Filler)
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, BarController, LineController, Tooltip, Legend, Filler)
 
 export const RED  = '#c81a1a'
 export const GOLD = '#e8b832'
