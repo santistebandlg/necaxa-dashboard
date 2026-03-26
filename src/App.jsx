@@ -6,10 +6,7 @@ import IndividualPanel from './components/IndividualPanel'
 import { RecuperacionesPanel, BalonesPanel, DuelosPanel, FisicoPanel } from './components/AnalysisPanels'
 import Login from './components/Login'
 
-export default function App() {
-  const [role, setRole] = useState(() => sessionStorage.getItem('necaxa_role') || null)
-
-  if (!role) return <Login onLogin={setRole} />
+function Dashboard() {
   const { status, jornadas, D, PL, raw, error, reload } = useSheetData()
   const [sbOpen,    setSbOpen]    = useState(true)
   const [current,   setCurrent]   = useState('colectivo')
@@ -155,4 +152,10 @@ export default function App() {
       </div>
     </div>
   )
+}
+
+export default function App() {
+  const [role, setRole] = React.useState(() => sessionStorage.getItem("necaxa_role") || null)
+  if (!role) return <Login onLogin={r => setRole(r)} />
+  return <Dashboard />
 }
