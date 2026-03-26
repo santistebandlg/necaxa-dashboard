@@ -338,29 +338,48 @@ function processJugadores(rows, jornadas) {
 export default function useSheetData() {
   const [state, setState] = useState({ status: 'loading', jornadas: [], D: {}, PL: [], raw: null })
 
-  const load = async () => {
+  const load = () => {
     setState(s => ({ ...s, status: 'loading' }))
-    try {
-      const res  = await fetch(API_URL + '?action=all', { redirect: 'follow' })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const text = await res.text()
-      if (text.trim().startsWith('<')) throw new Error('El script devolvió HTML. Verifica que el acceso sea "Cualquier persona (anónimo)".')
-      const raw  = JSON.parse(text)
 
-      const colRows = (raw.colectivo || []).filter(r => r.equipo === 'Necaxa' || r['Equipo'] === 'Necaxa')
-  const rivalRows = (raw.colectivo || []).filter(r => r.equipo !== 'Necaxa' && r['Equipo'] !== 'Necaxa')
-      const jorSet  = [...new Set(colRows.map(r => r.jornada).filter(Boolean))]
-      const jornadas = jorSet.sort((a, b) => {
-        return parseInt(String(a).replace(/\D/g,'')) - parseInt(String(b).replace(/\D/g,''))
-      })
+    // Use JSONP to avoid CORS issues when deployed
+    const cbName = '__necaxaCb_' + Date.now()
+    const script = document.createElement('script')
 
-      const D  = processColectivo(colRows, jornadas, rivalRows)
-      const PL = processJugadores(raw.jugadores || [], jornadas)
+    const timeout = setTimeout(() => {
+      cleanup()
+      setState(s => ({ ...s, status: 'error', error: 'Timeout al cargar datos. Verifica que el script esté publicado correctamente.' }))
+    }, 30000)
 
-      setState({ status: 'ok', jornadas, D, PL, raw })
-    } catch (err) {
-      setState(s => ({ ...s, status: 'error', error: err.message }))
+    const cleanup = () => {
+      clearTimeout(timeout)
+      delete window[cbName]
+      if (script.parentNode) script.parentNode.removeChild(script)
     }
+
+    window[cbName] = (raw) => {
+      cleanup()
+      try {
+        const colRows  = (raw.colectivo || []).filter(r => r.equipo === 'Necaxa' || r['Equipo'] === 'Necaxa')
+        const rivalRows = (raw.colectivo || []).filter(r => r.equipo !== 'Necaxa' && r['Equipo'] !== 'Necaxa')
+        const jorSet   = [...new Set(colRows.map(r => r.jornada).filter(Boolean))]
+        const jornadas = jorSet.sort((a, b) =>
+          parseInt(String(a).replace(/\D/g,'')) - parseInt(String(b).replace(/\D/g,''))
+        )
+        const D  = processColectivo(colRows, jornadas, rivalRows)
+        const PL = processJugadores(raw.jugadores || [], jornadas)
+        setState({ status: 'ok', jornadas, D, PL, raw })
+      } catch (err) {
+        setState(s => ({ ...s, status: 'error', error: err.message }))
+      }
+    }
+
+    script.onerror = () => {
+      cleanup()
+      setState(s => ({ ...s, status: 'error', error: 'No se pudo conectar con el script de Google.' }))
+    }
+
+    script.src = `${API_URL}?action=all&callback=${cbName}`
+    document.head.appendChild(script)
   }
 
   useEffect(() => { load() }, [])
