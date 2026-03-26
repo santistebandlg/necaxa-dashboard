@@ -4,8 +4,13 @@ import { Header, Sidebar, JornadaFilter, TorneoFilter, Loading, ErrorState } fro
 import ColectivoPanel from './components/ColectivoPanel'
 import IndividualPanel from './components/IndividualPanel'
 import { RecuperacionesPanel, BalonesPanel, DuelosPanel, FisicoPanel } from './components/AnalysisPanels'
+import Login from './components/Login'
 
 export default function App() {
+  const savedRole = sessionStorage.getItem('necaxa_role')
+  const [role, setRole] = useState(savedRole || null)
+
+  if (!role) return <Login onLogin={setRole} />
   const { status, jornadas, D, PL, raw, error, reload } = useSheetData()
   const [sbOpen,    setSbOpen]    = useState(true)
   const [current,   setCurrent]   = useState('colectivo')
