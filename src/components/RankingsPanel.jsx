@@ -194,14 +194,25 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
                 <Bar
                   data={{
                     labels: jornadaData.jornadas,
-                    datasets: [{ data: jornadaData.rankPerJ, backgroundColor: jornadaData.rankPerJ.map(r => r <= 3 ? GOLD : r <= 9 ? WHT : RED), borderRadius: 3, _barLabels: true }],
+                    datasets: [{
+                      type: 'line',
+                      data: jornadaData.rankPerJ,
+                      borderColor: GOLD,
+                      backgroundColor: 'transparent',
+                      pointBackgroundColor: jornadaData.rankPerJ.map(r => r <= 3 ? GOLD : r <= 9 ? WHT : RED),
+                      pointRadius: 5,
+                      pointHoverRadius: 7,
+                      borderWidth: 2,
+                      tension: 0.3,
+                      _intLine: true,
+                    }],
                   }}
                   options={{
                     responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
                       x: { grid: GRID },
-                      y: { grid: GRID, beginAtZero: false, reverse: true, min: 1, ticks: { stepSize: 1 } },
+                      y: { grid: GRID, reverse: true, min: 1, ticks: { stepSize: 1 } },
                     },
                   }}
                 />
