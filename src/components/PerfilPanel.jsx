@@ -180,6 +180,14 @@ export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornada
     pdf.save(`Perfil_${player.name.replace(/ /g, '_')}.pdf`)
   }
 
+  const [fisicoMode, setFisicoMode] = useState('total')
+
+  const fisicoVal = (key) => {
+    if (!fisicoAgg.count) return 0
+    if (fisicoMode === 'promedio' && !MAX_METRICS_F.includes(key)) return fisicoAgg[key] / fisicoAgg.count
+    return fisicoAgg[key]
+  }
+
   const labelRange = labels.length ? `${labels[0]} – ${labels[labels.length - 1]}` : 'Todas'
 
   return (
@@ -334,16 +342,29 @@ export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornada
         {/* ── SECCIÓN 5: Físico ── */}
         {fisicoAgg.count > 0 && <>
           <SecTitle>Datos Físicos — {fisicoAgg.count} partido{fisicoAgg.count !== 1 ? 's' : ''}</SecTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
-            {FISICO_METRICS.map(m => (
-              <StatCard
-                key={m.key}
-                label={m.label}
-                value={fisicoAgg[m.key] > 0 ? (+fisicoAgg[m.key].toFixed(1)).toLocaleString() : '—'}
-                sub={m.unit || undefined}
-                color={m.key === 'velocidadMax' ? GOLD : 'var(--white)'}
-              />
+          <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
+            {['total', 'promedio'].map(m => (
+              <button key={m} onClick={() => setFisicoMode(m)} style={{
+                padding: '4px 14px', borderRadius: 3, border: 'none', fontSize: 11, cursor: 'pointer',
+                fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
+                background: fisicoMode === m ? GOLD : 'var(--s2)',
+                color: fisicoMode === m ? '#111' : 'var(--gray3)',
+              }}>{m === 'total' ? 'Total' : 'Promedio/partido'}</button>
             ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+            {FISICO_METRICS.map(m => {
+              const v = fisicoVal(m.key)
+              return (
+                <StatCard
+                  key={m.key}
+                  label={m.label}
+                  value={v > 0 ? (+v.toFixed(1)).toLocaleString() : '—'}
+                  sub={m.unit || undefined}
+                  color={m.key === 'velocidadMax' ? GOLD : 'var(--white)'}
+                />
+              )
+            })}
           </div>
         </>}
 
