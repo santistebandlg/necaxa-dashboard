@@ -30,8 +30,9 @@ export function Sidebar({ open, current, onNav }) {
     { id: 'balones',        icon: '❌', label: 'Balones Perdidos', group: 'Análisis' },
     { id: 'duelos',         icon: '⚔️', label: 'Duelos',          group: 'Análisis' },
     { id: 'fisico',         icon: '🏃', label: 'Físico',          group: 'Análisis' },
+    { id: 'rankings',       icon: '🏆', label: 'Rankings',         group: 'Liga MX' },
   ]
-  const groups = ['Informes', 'Análisis']
+  const groups = ['Informes', 'Análisis', 'Liga MX']
   return (
     <nav className={`sb${open ? '' : ' closed'}`}>
       {groups.map(g => (

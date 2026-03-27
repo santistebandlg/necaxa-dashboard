@@ -5,6 +5,7 @@ import ColectivoPanel from './components/ColectivoPanel'
 import IndividualPanel from './components/IndividualPanel'
 import { RecuperacionesPanel, BalonesPanel, DuelosPanel, FisicoPanel } from './components/AnalysisPanels'
 import PerfilPanel from './components/PerfilPanel'
+import RankingsPanel from './components/RankingsPanel'
 import Login from './components/Login'
 
 function Dashboard() {
@@ -117,6 +118,7 @@ function Dashboard() {
     balones:        <BalonesPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,
     duelos:         <DuelosPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,
     fisico:         <FisicoPanel raw={raw} labels={activeLabels} activeTorneos={effectiveTorneos} />,
+    rankings:       <RankingsPanel raw={raw} labels={activeLabels} activeTorneos={effectiveTorneos} />,
   }
 
   return (
@@ -131,7 +133,7 @@ function Dashboard() {
                 colectivo: 'Informe Colectivo', individual: 'Informe Individual',
                 perfil: 'Perfil del Jugador',
                 recuperaciones: 'Recuperaciones', balones: 'Balones Perdidos',
-                duelos: 'Duelos', fisico: 'Físico'
+                duelos: 'Duelos', fisico: 'Físico', rankings: 'Rankings Liga MX'
               }[current]}</div>
               <div className="psub">Rendimiento · Google Sheets en vivo</div>
             </div>
