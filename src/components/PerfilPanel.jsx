@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react'
 import { Bar } from 'react-chartjs-2'
 import { StatBarChart } from './Charts'
 import { RED, GOLD, WHT, GRN, GRID } from '../utils/chartUtils'
+import PitchMap from './PitchMap'
 
 // ── Helpers ──────────────────────────────────────────────────
 function fmt(v) {
@@ -181,6 +182,7 @@ export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornada
   }
 
   const [fisicoMode, setFisicoMode] = useState('total')
+  const [mapaModulo, setMapaModulo] = useState('recuperaciones')
 
   const fisicoVal = (key) => {
     if (!fisicoAgg.count) return 0
@@ -339,7 +341,82 @@ export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornada
           </div>
         </>}
 
-        {/* ── SECCIÓN 5: Físico ── */}
+        {/* ── SECCIÓN 5: Mapa de eventos ── */}
+        {(recEvents.length > 0 || balEvents.length > 0 || dueEvents.length > 0) && <>
+          <SecTitle>Mapa de Eventos</SecTitle>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 16, alignItems: 'center' }}>
+            <span style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 1, textTransform: 'uppercase', marginRight: 4 }}>Módulo:</span>
+            {[
+              { key: 'recuperaciones', label: 'Recuperaciones', show: recEvents.length > 0 },
+              { key: 'balones',        label: 'Balones Perdidos', show: balEvents.length > 0 },
+              { key: 'duelos',         label: 'Duelos', show: dueEvents.length > 0 },
+            ].filter(m => m.show).map(m => (
+              <button key={m.key} onClick={() => setMapaModulo(m.key)} style={{
+                padding: '4px 12px', borderRadius: 3, border: 'none', fontSize: 11, cursor: 'pointer',
+                fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: 0.5,
+                background: mapaModulo === m.key ? 'var(--red)' : 'var(--s2)',
+                color: mapaModulo === m.key ? '#fff' : 'var(--gray3)',
+              }}>{m.label}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+            <div style={{ width: 280, flexShrink: 0 }}>
+              {mapaModulo === 'recuperaciones' && (
+                <PitchMap
+                  events={recEvents}
+                  colorFn={e => e.campoProRiv === 'Campo rival' ? GOLD : RED}
+                  tooltipFn={e => `${e.accion} — ${e.jornada}`}
+                  filters={{}}
+                />
+              )}
+              {mapaModulo === 'balones' && (
+                <PitchMap
+                  events={balEvents}
+                  colorFn={e => e.campoProRiv === 'Campo rival' ? GOLD : RED}
+                  tooltipFn={e => `${e.accion} — ${e.jornada}`}
+                  filters={{}}
+                />
+              )}
+              {mapaModulo === 'duelos' && (
+                <PitchMap
+                  events={dueEvents}
+                  colorFn={e => e.resultado === 'Ganado' ? GRN : RED}
+                  tooltipFn={e => `${e.accion} — ${e.resultado} — ${e.jornada}`}
+                  filters={{}}
+                />
+              )}
+            </div>
+            <div style={{ paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--gray)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Leyenda</div>
+              {mapaModulo === 'recuperaciones' && <>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, flexShrink: 0, display: 'inline-block' }} />Campo propio
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: GOLD, flexShrink: 0, display: 'inline-block' }} />Campo rival
+                </span>
+              </>}
+              {mapaModulo === 'balones' && <>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, flexShrink: 0, display: 'inline-block' }} />Campo propio
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: GOLD, flexShrink: 0, display: 'inline-block' }} />Campo rival
+                </span>
+              </>}
+              {mapaModulo === 'duelos' && <>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: GRN, flexShrink: 0, display: 'inline-block' }} />Ganado
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, flexShrink: 0, display: 'inline-block' }} />Perdido
+                </span>
+              </>}
+            </div>
+          </div>
+        </>}
+
+        {/* ── SECCIÓN 6: Físico ── */}
         {fisicoAgg.count > 0 && <>
           <SecTitle>Datos Físicos — {fisicoAgg.count} partido{fisicoAgg.count !== 1 ? 's' : ''}</SecTitle>
           <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
