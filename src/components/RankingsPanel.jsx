@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Bar } from 'react-chartjs-2'
+import { Bar, Scatter } from 'react-chartjs-2'
 import { RED, GOLD, WHT, GRID } from '../utils/chartUtils'
 
 const NECAXA = 'Necaxa'
@@ -225,6 +225,153 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
   )
 }
 
+// ── Scatter chart ─────────────────────────────────────────────
+function ScatterChart({ rows, labels, activeTorneos, title }) {
+  const metrics  = useMetrics(rows)
+  const [metricX, setMetricX] = useState(metrics[0] || '')
+  const [metricY, setMetricY] = useState(metrics[1] || '')
+  const [mode, setMode]       = useState('total')
+
+  React.useEffect(() => {
+    if (metrics.length > 0 && !metrics.includes(metricX)) setMetricX(metrics[0])
+    if (metrics.length > 1 && !metrics.includes(metricY)) setMetricY(metrics[1])
+  }, [metrics])
+
+  const points = useMemo(() => {
+    const teams = {}
+    rows.forEach(r => {
+      if (labels?.length && !labels.includes(r.jornada)) return
+      if (activeTorneos?.length && !activeTorneos.includes(r.torneo)) return
+      const eq = r.equipo || r.Equipo || ''
+      if (!eq) return
+      if (!teams[eq]) teams[eq] = { equipo: eq, sumX: 0, sumY: 0, count: 0 }
+      teams[eq].sumX += (r[metricX] || 0)
+      teams[eq].sumY += (r[metricY] || 0)
+      teams[eq].count++
+    })
+    return Object.values(teams).map(t => ({
+      equipo: t.equipo,
+      x: mode === 'promedio' && t.count > 0 ? t.sumX / t.count : t.sumX,
+      y: mode === 'promedio' && t.count > 0 ? t.sumY / t.count : t.sumY,
+    }))
+  }, [rows, labels, activeTorneos, metricX, metricY, mode])
+
+  if (!metrics.length) return null
+
+  const btnStyle = (active) => ({
+    padding: '3px 12px', borderRadius: 3, border: 'none', fontSize: 11, cursor: 'pointer',
+    fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: 0.5,
+    background: active ? 'var(--red)' : 'var(--s2)',
+    color: active ? '#fff' : 'var(--gray3)',
+  })
+
+  const selStyle = {
+    background: '#111', border: '1px solid var(--border)', borderRadius: 4,
+    color: 'var(--white)', padding: '5px 10px', fontSize: 12,
+    fontFamily: "'Barlow', sans-serif", cursor: 'pointer', maxWidth: 220,
+  }
+
+  // Plugin to draw team name labels on each point
+  const labelsPlugin = {
+    id: 'scatter-labels',
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx
+      const meta = chart.getDatasetMeta(0)
+      meta.data.forEach((el, i) => {
+        const pt = points[i]
+        if (!pt) return
+        const isNecaxa = pt.equipo === NECAXA
+        ctx.save()
+        ctx.font = `${isNecaxa ? 'bold' : 'normal'} 10px Barlow, sans-serif`
+        ctx.fillStyle = isNecaxa ? RED : 'rgba(255,255,255,0.55)'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        ctx.shadowColor = 'rgba(0,0,0,0.8)'
+        ctx.shadowBlur = 4
+        ctx.fillText(pt.equipo, el.x, el.y - 7)
+        ctx.restore()
+      })
+    }
+  }
+
+  return (
+    <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 20, marginTop: 16 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--white)', marginBottom: 16 }}>{title} — Dispersión</div>
+
+      {/* Controls */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {['total','promedio'].map(m => (
+            <button key={m} onClick={() => setMode(m)} style={btnStyle(mode === m)}>
+              {m === 'total' ? 'Total' : 'Promedio/partido'}
+            </button>
+          ))}
+        </div>
+        <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 1, textTransform: 'uppercase' }}>Eje X:</span>
+          <select value={metricX} onChange={e => setMetricX(e.target.value)} style={selStyle}>
+            {metrics.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 1, textTransform: 'uppercase' }}>Eje Y:</span>
+          <select value={metricY} onChange={e => setMetricY(e.target.value)} style={selStyle}>
+            {metrics.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div style={{ height: 420 }}>
+        <Scatter
+          data={{
+            datasets: [{
+              data: points.map(p => ({ x: p.x, y: p.y })),
+              pointBackgroundColor: points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.3)'),
+              pointBorderColor:     points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.5)'),
+              pointRadius:          points.map(p => p.equipo === NECAXA ? 9 : 6),
+              pointHoverRadius:     10,
+            }],
+          }}
+          options={{
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const pt = points[ctx.dataIndex]
+                    return `${pt?.equipo}: (${ctx.parsed.x.toFixed(2)}, ${ctx.parsed.y.toFixed(2)})`
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { grid: GRID, title: { display: true, text: metricX, color: 'var(--gray)', font: { size: 11 } } },
+              y: { grid: GRID, title: { display: true, text: metricY, color: 'var(--gray)', font: { size: 11 } } },
+            },
+          }}
+          plugins={[labelsPlugin]}
+        />
+      </div>
+
+      {/* Necaxa highlight */}
+      {points.find(p => p.equipo === NECAXA) && (() => {
+        const n = points.find(p => p.equipo === NECAXA)
+        return (
+          <div style={{ display: 'flex', gap: 16, marginTop: 12, alignItems: 'center' }}>
+            <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, display: 'inline-block' }} />
+            <span style={{ fontSize: 12, color: 'var(--gray3)' }}>
+              <strong style={{ color: '#fff' }}>Necaxa</strong> — {metricX}: <strong style={{ color: RED }}>{n.x.toFixed(2)}</strong> · {metricY}: <strong style={{ color: RED }}>{n.y.toFixed(2)}</strong>
+            </span>
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────
 export default function RankingsPanel({ raw, labels, activeTorneos }) {
   const ligaRows   = raw?.ligamx      || []
@@ -239,13 +386,27 @@ export default function RankingsPanel({ raw, labels, activeTorneos }) {
         title="Ranking Liga MX — Datos de Juego"
         sourceKey="ligamx"
       />
-      <RankingChart
-        rows={fisicoRows}
+      <ScatterChart
+        rows={ligaRows}
         labels={labels}
         activeTorneos={activeTorneos}
-        title="Ranking Liga MX — Datos Físicos"
-        sourceKey="fisicoliga"
+        title="Liga MX — Datos de Juego"
       />
+      <div style={{ marginTop: 32 }}>
+        <RankingChart
+          rows={fisicoRows}
+          labels={labels}
+          activeTorneos={activeTorneos}
+          title="Ranking Liga MX — Datos Físicos"
+          sourceKey="fisicoliga"
+        />
+        <ScatterChart
+          rows={fisicoRows}
+          labels={labels}
+          activeTorneos={activeTorneos}
+          title="Liga MX — Datos Físicos"
+        />
+      </div>
     </div>
   )
 }
