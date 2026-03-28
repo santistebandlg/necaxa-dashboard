@@ -271,87 +271,93 @@ function ScatterChart({ rows, labels, activeTorneos, title, sourceKey }) {
     fontFamily: "'Barlow', sans-serif", cursor: 'pointer', maxWidth: 220,
   }
 
-  const { scatterData, labelsPlugin } = useMemo(() => {
-    const scatterData = {
-      datasets: [{
-        data: points.map(p => ({ x: p.x, y: p.y })),
-        pointBackgroundColor: points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.3)'),
-        pointBorderColor:     points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.5)'),
-        pointRadius:          points.map(p => p.equipo === NECAXA ? 9 : 6),
-        pointHoverRadius:     10,
-      }],
-    }
+  const pointsRef = React.useRef(points)
+  React.useEffect(() => { pointsRef.current = points }, [points])
 
-    const currentPoints = points
+  const avgX = useMemo(() => points.reduce((s, p) => s + p.x, 0) / (points.length || 1), [points])
+  const avgY = useMemo(() => points.reduce((s, p) => s + p.y, 0) / (points.length || 1), [points])
 
-    const labelsPlugin = {
-      id: 'scatter-labels-' + sourceKey,
-      afterDatasetsDraw(chart) {
-        const ctx = chart.ctx
-        const xScale = chart.scales.x
-        const yScale = chart.scales.y
+  const scatterData = useMemo(() => ({
+    datasets: [{
+      data: points.map(p => ({ x: p.x, y: p.y })),
+      pointBackgroundColor: points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.3)'),
+      pointBorderColor:     points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.5)'),
+      pointRadius:          points.map(p => p.equipo === NECAXA ? 9 : 6),
+      pointHoverRadius:     10,
+    }],
+  }), [points])
 
-        const avgX = currentPoints.reduce((s, p) => s + p.x, 0) / (currentPoints.length || 1)
-        const avgY = currentPoints.reduce((s, p) => s + p.y, 0) / (currentPoints.length || 1)
+  // Single stable plugin — reads from ref so always has latest data
+  const labelsPlugin = React.useMemo(() => ({
+    id: `scatter-labels-${sourceKey}`,
+    afterRender(chart) {
+      const ctx = chart.ctx
+      const xScale = chart.scales.x
+      const yScale = chart.scales.y
+      if (!xScale || !yScale) return
 
-        const xPx = xScale.getPixelForValue(avgX)
+      const pts = pointsRef.current
+      const ax = pts.reduce((s, p) => s + p.x, 0) / (pts.length || 1)
+      const ay = pts.reduce((s, p) => s + p.y, 0) / (pts.length || 1)
+
+      // Vertical line (avg X)
+      const xPx = xScale.getPixelForValue(ax)
+      ctx.save()
+      ctx.setLineDash([6, 4])
+      ctx.strokeStyle = GOLD
+      ctx.lineWidth = 1.5
+      ctx.globalAlpha = 0.8
+      ctx.beginPath()
+      ctx.moveTo(xPx, yScale.top)
+      ctx.lineTo(xPx, yScale.bottom)
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.globalAlpha = 1
+      ctx.font = 'bold 10px Barlow, sans-serif'
+      ctx.fillStyle = GOLD
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+      ctx.fillText(`x̄ ${ax.toFixed(1)}`, xPx, yScale.top + 4)
+      ctx.restore()
+
+      // Horizontal line (avg Y)
+      const yPx = yScale.getPixelForValue(ay)
+      ctx.save()
+      ctx.setLineDash([6, 4])
+      ctx.strokeStyle = GOLD
+      ctx.lineWidth = 1.5
+      ctx.globalAlpha = 0.8
+      ctx.beginPath()
+      ctx.moveTo(xScale.left, yPx)
+      ctx.lineTo(xScale.right, yPx)
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.globalAlpha = 1
+      ctx.font = 'bold 10px Barlow, sans-serif'
+      ctx.fillStyle = GOLD
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'bottom'
+      ctx.fillText(`ȳ ${ay.toFixed(1)}`, xScale.left + 4, yPx - 4)
+      ctx.restore()
+
+      // Team name labels
+      const meta = chart.getDatasetMeta(0)
+      meta.data.forEach((el, i) => {
+        const pt = pts[i]
+        if (!pt) return
+        const isNecaxa = pt.equipo === NECAXA
         ctx.save()
-        ctx.setLineDash([5, 5])
-        ctx.strokeStyle = GOLD
-        ctx.lineWidth = 1.5
-        ctx.globalAlpha = 0.7
-        ctx.beginPath()
-        ctx.moveTo(xPx, yScale.top)
-        ctx.lineTo(xPx, yScale.bottom)
-        ctx.stroke()
-        ctx.setLineDash([])
-        ctx.globalAlpha = 1
-        ctx.font = 'bold 10px Barlow, sans-serif'
-        ctx.fillStyle = GOLD
+        ctx.font = `${isNecaxa ? 'bold' : 'normal'} 10px Barlow, sans-serif`
+        ctx.fillStyle = isNecaxa ? RED : 'rgba(255,255,255,0.6)'
         ctx.textAlign = 'center'
-        ctx.textBaseline = 'top'
-        ctx.fillText(`x̄ ${avgX.toFixed(1)}`, xPx, yScale.top + 4)
-        ctx.restore()
-
-        const yPx = yScale.getPixelForValue(avgY)
-        ctx.save()
-        ctx.setLineDash([5, 5])
-        ctx.strokeStyle = GOLD
-        ctx.lineWidth = 1.5
-        ctx.globalAlpha = 0.7
-        ctx.beginPath()
-        ctx.moveTo(xScale.left, yPx)
-        ctx.lineTo(xScale.right, yPx)
-        ctx.stroke()
-        ctx.setLineDash([])
-        ctx.globalAlpha = 1
-        ctx.font = 'bold 10px Barlow, sans-serif'
-        ctx.fillStyle = GOLD
-        ctx.textAlign = 'left'
         ctx.textBaseline = 'bottom'
-        ctx.fillText(`ȳ ${avgY.toFixed(1)}`, xScale.left + 4, yPx - 4)
+        ctx.shadowColor = 'rgba(0,0,0,0.9)'
+        ctx.shadowBlur = 3
+        ctx.fillText(pt.equipo, el.x, el.y - 7)
         ctx.restore()
-
-        const meta = chart.getDatasetMeta(0)
-        meta.data.forEach((el, i) => {
-          const pt = currentPoints[i]
-          if (!pt) return
-          const isNecaxa = pt.equipo === NECAXA
-          ctx.save()
-          ctx.font = `${isNecaxa ? 'bold' : 'normal'} 10px Barlow, sans-serif`
-          ctx.fillStyle = isNecaxa ? RED : 'rgba(255,255,255,0.55)'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'bottom'
-          ctx.shadowColor = 'rgba(0,0,0,0.8)'
-          ctx.shadowBlur = 4
-          ctx.fillText(pt.equipo, el.x, el.y - 7)
-          ctx.restore()
-        })
-      }
+      })
     }
-
-    return { scatterData, labelsPlugin }
-  }, [points])
+  }), [sourceKey])
 
   return (
     <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 20, marginTop: 16 }}>
