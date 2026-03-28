@@ -226,7 +226,7 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
 }
 
 // ── Scatter chart ─────────────────────────────────────────────
-function ScatterChart({ rows, labels, activeTorneos, title }) {
+function ScatterChart({ rows, labels, activeTorneos, title, sourceKey }) {
   const metrics  = useMetrics(rows)
   const [metricX, setMetricX] = useState(metrics[0] || '')
   const [metricY, setMetricY] = useState(metrics[1] || '')
@@ -271,78 +271,87 @@ function ScatterChart({ rows, labels, activeTorneos, title }) {
     fontFamily: "'Barlow', sans-serif", cursor: 'pointer', maxWidth: 220,
   }
 
-  // Plugin to draw team name labels and average lines
-  const labelsPlugin = {
-    id: 'scatter-labels',
-    afterDatasetsDraw(chart) {
-      const ctx = chart.ctx
-      const xScale = chart.scales.x
-      const yScale = chart.scales.y
-
-      // Average values
-      const avgX = points.reduce((s, p) => s + p.x, 0) / (points.length || 1)
-      const avgY = points.reduce((s, p) => s + p.y, 0) / (points.length || 1)
-
-      // Draw average X line (vertical)
-      const xPx = xScale.getPixelForValue(avgX)
-      ctx.save()
-      ctx.setLineDash([5, 5])
-      ctx.strokeStyle = GOLD
-      ctx.lineWidth = 1.5
-      ctx.globalAlpha = 0.7
-      ctx.beginPath()
-      ctx.moveTo(xPx, yScale.top)
-      ctx.lineTo(xPx, yScale.bottom)
-      ctx.stroke()
-      // Label
-      ctx.setLineDash([])
-      ctx.globalAlpha = 1
-      ctx.font = 'bold 10px Barlow, sans-serif'
-      ctx.fillStyle = GOLD
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'top'
-      ctx.fillText(`x̄ ${avgX.toFixed(1)}`, xPx, yScale.top + 4)
-      ctx.restore()
-
-      // Draw average Y line (horizontal)
-      const yPx = yScale.getPixelForValue(avgY)
-      ctx.save()
-      ctx.setLineDash([5, 5])
-      ctx.strokeStyle = GOLD
-      ctx.lineWidth = 1.5
-      ctx.globalAlpha = 0.7
-      ctx.beginPath()
-      ctx.moveTo(xScale.left, yPx)
-      ctx.lineTo(xScale.right, yPx)
-      ctx.stroke()
-      // Label
-      ctx.setLineDash([])
-      ctx.globalAlpha = 1
-      ctx.font = 'bold 10px Barlow, sans-serif'
-      ctx.fillStyle = GOLD
-      ctx.textAlign = 'left'
-      ctx.textBaseline = 'bottom'
-      ctx.fillText(`ȳ ${avgY.toFixed(1)}`, xScale.left + 4, yPx - 4)
-      ctx.restore()
-
-      // Draw team name labels on each point
-      const meta = chart.getDatasetMeta(0)
-      meta.data.forEach((el, i) => {
-        const pt = points[i]
-        if (!pt) return
-        const isNecaxa = pt.equipo === NECAXA
-        ctx.save()
-        ctx.font = `${isNecaxa ? 'bold' : 'normal'} 10px Barlow, sans-serif`
-        ctx.fillStyle = isNecaxa ? RED : 'rgba(255,255,255,0.55)'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'bottom'
-        ctx.shadowColor = 'rgba(0,0,0,0.8)'
-        ctx.shadowBlur = 4
-        ctx.fillText(pt.equipo, el.x, el.y - 7)
-        ctx.restore()
-      })
+  const { scatterData, labelsPlugin } = useMemo(() => {
+    const scatterData = {
+      datasets: [{
+        data: points.map(p => ({ x: p.x, y: p.y })),
+        pointBackgroundColor: points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.3)'),
+        pointBorderColor:     points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.5)'),
+        pointRadius:          points.map(p => p.equipo === NECAXA ? 9 : 6),
+        pointHoverRadius:     10,
+      }],
     }
-  }
+
+    const currentPoints = points
+
+    const labelsPlugin = {
+      id: 'scatter-labels-' + sourceKey,
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx
+        const xScale = chart.scales.x
+        const yScale = chart.scales.y
+
+        const avgX = currentPoints.reduce((s, p) => s + p.x, 0) / (currentPoints.length || 1)
+        const avgY = currentPoints.reduce((s, p) => s + p.y, 0) / (currentPoints.length || 1)
+
+        const xPx = xScale.getPixelForValue(avgX)
+        ctx.save()
+        ctx.setLineDash([5, 5])
+        ctx.strokeStyle = GOLD
+        ctx.lineWidth = 1.5
+        ctx.globalAlpha = 0.7
+        ctx.beginPath()
+        ctx.moveTo(xPx, yScale.top)
+        ctx.lineTo(xPx, yScale.bottom)
+        ctx.stroke()
+        ctx.setLineDash([])
+        ctx.globalAlpha = 1
+        ctx.font = 'bold 10px Barlow, sans-serif'
+        ctx.fillStyle = GOLD
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'top'
+        ctx.fillText(`x̄ ${avgX.toFixed(1)}`, xPx, yScale.top + 4)
+        ctx.restore()
+
+        const yPx = yScale.getPixelForValue(avgY)
+        ctx.save()
+        ctx.setLineDash([5, 5])
+        ctx.strokeStyle = GOLD
+        ctx.lineWidth = 1.5
+        ctx.globalAlpha = 0.7
+        ctx.beginPath()
+        ctx.moveTo(xScale.left, yPx)
+        ctx.lineTo(xScale.right, yPx)
+        ctx.stroke()
+        ctx.setLineDash([])
+        ctx.globalAlpha = 1
+        ctx.font = 'bold 10px Barlow, sans-serif'
+        ctx.fillStyle = GOLD
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'bottom'
+        ctx.fillText(`ȳ ${avgY.toFixed(1)}`, xScale.left + 4, yPx - 4)
+        ctx.restore()
+
+        const meta = chart.getDatasetMeta(0)
+        meta.data.forEach((el, i) => {
+          const pt = currentPoints[i]
+          if (!pt) return
+          const isNecaxa = pt.equipo === NECAXA
+          ctx.save()
+          ctx.font = `${isNecaxa ? 'bold' : 'normal'} 10px Barlow, sans-serif`
+          ctx.fillStyle = isNecaxa ? RED : 'rgba(255,255,255,0.55)'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'bottom'
+          ctx.shadowColor = 'rgba(0,0,0,0.8)'
+          ctx.shadowBlur = 4
+          ctx.fillText(pt.equipo, el.x, el.y - 7)
+          ctx.restore()
+        })
+      }
+    }
+
+    return { scatterData, labelsPlugin }
+  }, [points])
 
   return (
     <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 20, marginTop: 16 }}>
@@ -375,15 +384,7 @@ function ScatterChart({ rows, labels, activeTorneos, title }) {
       {/* Chart */}
       <div style={{ height: 420 }}>
         <Scatter
-          data={{
-            datasets: [{
-              data: points.map(p => ({ x: p.x, y: p.y })),
-              pointBackgroundColor: points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.3)'),
-              pointBorderColor:     points.map(p => p.equipo === NECAXA ? RED : 'rgba(255,255,255,0.5)'),
-              pointRadius:          points.map(p => p.equipo === NECAXA ? 9 : 6),
-              pointHoverRadius:     10,
-            }],
-          }}
+          data={scatterData}
           options={{
             responsive: true, maintainAspectRatio: false,
             plugins: {
@@ -441,6 +442,7 @@ export default function RankingsPanel({ raw, labels, activeTorneos }) {
         labels={labels}
         activeTorneos={activeTorneos}
         title="Liga MX — Datos de Juego"
+        sourceKey="ligamx"
       />
       <div style={{ marginTop: 32 }}>
         <RankingChart
@@ -455,6 +457,7 @@ export default function RankingsPanel({ raw, labels, activeTorneos }) {
           labels={labels}
           activeTorneos={activeTorneos}
           title="Liga MX — Datos Físicos"
+          sourceKey="fisicoliga"
         />
       </div>
     </div>
