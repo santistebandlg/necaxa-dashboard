@@ -271,11 +271,61 @@ function ScatterChart({ rows, labels, activeTorneos, title }) {
     fontFamily: "'Barlow', sans-serif", cursor: 'pointer', maxWidth: 220,
   }
 
-  // Plugin to draw team name labels on each point
+  // Plugin to draw team name labels and average lines
   const labelsPlugin = {
     id: 'scatter-labels',
     afterDatasetsDraw(chart) {
       const ctx = chart.ctx
+      const xScale = chart.scales.x
+      const yScale = chart.scales.y
+
+      // Average values
+      const avgX = points.reduce((s, p) => s + p.x, 0) / (points.length || 1)
+      const avgY = points.reduce((s, p) => s + p.y, 0) / (points.length || 1)
+
+      // Draw average X line (vertical)
+      const xPx = xScale.getPixelForValue(avgX)
+      ctx.save()
+      ctx.setLineDash([5, 5])
+      ctx.strokeStyle = GOLD
+      ctx.lineWidth = 1.5
+      ctx.globalAlpha = 0.7
+      ctx.beginPath()
+      ctx.moveTo(xPx, yScale.top)
+      ctx.lineTo(xPx, yScale.bottom)
+      ctx.stroke()
+      // Label
+      ctx.setLineDash([])
+      ctx.globalAlpha = 1
+      ctx.font = 'bold 10px Barlow, sans-serif'
+      ctx.fillStyle = GOLD
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+      ctx.fillText(`x̄ ${avgX.toFixed(1)}`, xPx, yScale.top + 4)
+      ctx.restore()
+
+      // Draw average Y line (horizontal)
+      const yPx = yScale.getPixelForValue(avgY)
+      ctx.save()
+      ctx.setLineDash([5, 5])
+      ctx.strokeStyle = GOLD
+      ctx.lineWidth = 1.5
+      ctx.globalAlpha = 0.7
+      ctx.beginPath()
+      ctx.moveTo(xScale.left, yPx)
+      ctx.lineTo(xScale.right, yPx)
+      ctx.stroke()
+      // Label
+      ctx.setLineDash([])
+      ctx.globalAlpha = 1
+      ctx.font = 'bold 10px Barlow, sans-serif'
+      ctx.fillStyle = GOLD
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'bottom'
+      ctx.fillText(`ȳ ${avgY.toFixed(1)}`, xScale.left + 4, yPx - 4)
+      ctx.restore()
+
+      // Draw team name labels on each point
       const meta = chart.getDatasetMeta(0)
       meta.data.forEach((el, i) => {
         const pt = points[i]
