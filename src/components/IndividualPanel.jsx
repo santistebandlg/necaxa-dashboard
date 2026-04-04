@@ -3,7 +3,7 @@ import { StatBarChart } from './Charts'
 import { RED, GOLD, WHT } from '../utils/chartUtils'
 
 const ROLE_ORDER = [
-  'Portero','Stopper Izquierdo Ofensivo','Libero Ofensivo','Stopper Derecho Ofensivo',
+  'Portero','Stopper Izquierdo','Libero','Stopper Derecho',
   'Lateral que Interioriza','Pivote','Interior Defensivo','Interior Ofensivo',
   'Extremo - Lateral que Interioriza','Extremo','Interior Defensivo - Ofensivo','Delantero',
 ]
@@ -42,7 +42,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
   )
 
   const ROLE_DISPLAY_ORDER = [
-    'Portero','Stopper Izquierdo Ofensivo','Libero Ofensivo','Stopper Derecho Ofensivo',
+    'Portero','Stopper Izquierdo','Libero','Stopper Derecho',
     'Lateral que Interioriza','Pivote','Interior Defensivo','Interior Ofensivo',
     'Extremo - Lateral que Interioriza','Extremo','Interior Defensivo - Ofensivo','Delantero',
   ]

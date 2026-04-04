@@ -114,9 +114,9 @@ const PLAYER_ROLES = {
 
 const ROLE_LABELS = {
   portero:      'Portero',
-  stopper_izq:  'Stopper Izquierdo Ofensivo',
-  libero:       'Libero Ofensivo',
-  stopper_der:  'Stopper Derecho Ofensivo',
+  stopper_izq:  'Stopper Izquierdo',
+  libero:       'Libero',
+  stopper_der:  'Stopper Derecho',
   lateral:      'Lateral que Interioriza',
   pivote:       'Pivote',
   int_def:      'Interior Defensivo',
@@ -156,7 +156,19 @@ function getStatsByRole(name, jornadas, jornadaData) {
     row('Pases largos / precisos',       'pasesLargos',     'pasesLargosLog',  'pasesLargosPct', 'pasesLargos',     'r'),
   ]
 
-  if (role === 'stopper_izq' || role === 'libero') return [
+  if (role === 'stopper_izq') return [
+    row('Recuperaciones',                'recuperaciones',   null,              null,             'recuperaciones',  'r'),
+    row('Interceptaciones',              'interceptaciones', null,              null,             'interceptaciones','w'),
+    row('Balones perdidos',              'balonesPerdidos',  null,              null,             'balonesPerdidos', 'r'),
+    row('Duelos def. / ganados',         'duelosDef',       'duelosDefGan',    'duelosDefGanPct','duelosDef',       'r'),
+    row('Duelos aéreos / ganados',       'duelosAereos',    'duelosAereosGan', 'duelosAereosPct','duelosAereos',    'r'),
+    row('Despejes',                      'despejes',         null,              null,             'despejes',        'g'),
+    row('Pases adelante / precisos',     'pasesAdelante',   'pasesAdelanteLog','pasesAdelantePct','pasesAdelante',  'r'),
+    row('Pases largos / precisos',       'pasesLargos',     'pasesLargosLog',  'pasesLargosPct', 'pasesLargos',     'r'),
+    row('Centros / precisos',            'centros',         'centrosPrecisos', 'centrosPct',     'centros',         'r'),
+  ]
+
+  if (role === 'libero') return [
     row('Recuperaciones',                'recuperaciones',   null,              null,             'recuperaciones',  'r'),
     row('Interceptaciones',              'interceptaciones', null,              null,             'interceptaciones','w'),
     row('Duelos def. / ganados',         'duelosDef',       'duelosDefGan',    'duelosDefGanPct','duelosDef',       'r'),
@@ -164,7 +176,6 @@ function getStatsByRole(name, jornadas, jornadaData) {
     row('Despejes',                      'despejes',         null,              null,             'despejes',        'g'),
     row('Pases adelante / precisos',     'pasesAdelante',   'pasesAdelanteLog','pasesAdelantePct','pasesAdelante',  'r'),
     row('Pases largos / precisos',       'pasesLargos',     'pasesLargosLog',  'pasesLargosPct', 'pasesLargos',     'r'),
-    row('Centros / precisos',            'centros',         'centrosPrecisos', 'centrosPct',     'centros',         'r'),
   ]
 
   if (role === 'stopper_der') return [

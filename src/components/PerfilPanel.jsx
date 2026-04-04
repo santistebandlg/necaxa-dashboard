@@ -116,7 +116,7 @@ export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornada
 
   // Role groups for selector
   const ROLE_ORDER = [
-    'Portero','Stopper Izquierdo Ofensivo','Libero Ofensivo','Stopper Derecho Ofensivo',
+    'Portero','Stopper Izquierdo','Libero','Stopper Derecho',
     'Lateral que Interioriza','Pivote','Interior Defensivo','Interior Ofensivo',
     'Extremo - Lateral que Interioriza','Extremo','Interior Defensivo - Ofensivo','Delantero',
   ]
