@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { StatBarChart } from './Charts'
 import { RED, GOLD, WHT } from '../utils/chartUtils'
+import { getPlayerPhoto } from '../utils/playerPhotos'
 
 const ROLE_ORDER = [
   'Portero','Stopper Izquierdo','Libero','Stopper Derecho',
@@ -29,6 +30,27 @@ function pctColor(v) {
   if (pct >= 70) return '#3fb950'
   if (pct >= 50) return '#e8b832'
   return '#c81a1a'
+}
+
+function PlayerAvatar({ name, ini, size = 72 }) {
+  const photo = getPlayerPhoto(name)
+  const [imgError, setImgError] = React.useState(false)
+  if (photo && !imgError) return (
+    <img
+      src={photo}
+      alt={name}
+      onError={() => setImgError(true)}
+      style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0, border: '2px solid var(--border)' }}
+    />
+  )
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', background: RED, flexShrink: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900,
+      fontSize: size * 0.33, color: '#fff', letterSpacing: 1,
+    }}>{ini}</div>
+  )
 }
 
 export default function IndividualPanel({ PL, labels, allJornadas }) {
@@ -86,7 +108,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
 
       {/* Player header */}
       <div className="plhdr" style={{ marginBottom: 24 }}>
-        <div className="plav">{player.ini}</div>
+        <PlayerAvatar name={player.name} ini={player.ini} size={72} />
         <div>
           <div className="plname">{player.name}</div>
           <div className="plpos">{player.pos}</div>

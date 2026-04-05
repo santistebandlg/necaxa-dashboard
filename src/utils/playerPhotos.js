@@ -1,0 +1,37 @@
+export const PLAYER_PHOTOS = {
+  'ezequiel unsain':        '/players/164085.jpg',
+  'agustín oliveros':       '/players/150281.jpg',
+  'agustin oliveros':       '/players/150281.jpg',
+  'francisco méndez':       '/players/132453.jpg',
+  'francisco mendez':       '/players/132453.jpg',
+  'alexis peña':            '/players/91461.jpg',
+  'alexis pena':            '/players/91461.jpg',
+  'raúl martínez':          '/players/132332.jpg',
+  'raul martinez':          '/players/132332.jpg',
+  'emilio lara':            '/players/110440.jpg',
+  'ricardo alonso':         '/players/150268.jpg',
+  'cristian calderón':      '/players/93773.jpg',
+  'cristian calderon':      '/players/93773.jpg',
+  'daniel leyva':           '/players/151183.jpg',
+  'kevin gutiérrez':        '/players/189771.jpg',
+  'kevin gutierrez':        '/players/189771.jpg',
+  'rogelio cortéz':         '/players/115590.jpg',
+  'rogelio cortez':         '/players/115590.jpg',
+  'agustín almendra':       '/players/189801.jpg',
+  'agustin almendra':       '/players/189801.jpg',
+  'israel tello':           '/players/153287.jpg',
+  'franco rossano':         '/players/124289.jpg',
+  'ricardo monreal':        '/players/104329.jpg',
+  'kevin rosero':           '/players/172082.jpg',
+  'javier ruiz':            '/players/190939.jpg',
+  'lorenzo faravelli':      '/players/170667.jpg',
+  'julián carranza':        '/players/164954.jpg',
+  'julian carranza':        '/players/164954.jpg',
+  'tomás badaloni':         '/players/172932.jpg',
+  'tomas badaloni':         '/players/172932.jpg',
+  'bryan casas':            '/players/124567.jpg',
+}
+
+export function getPlayerPhoto(name) {
+  return PLAYER_PHOTOS[(name || '').toLowerCase().trim()] || null
+}

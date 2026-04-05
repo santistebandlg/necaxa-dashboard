@@ -3,6 +3,7 @@ import { Bar } from 'react-chartjs-2'
 import { StatBarChart } from './Charts'
 import { RED, GOLD, WHT, GRN, GRID } from '../utils/chartUtils'
 import PitchMap from './PitchMap'
+import { getPlayerPhoto } from '../utils/playerPhotos'
 
 // ── Helpers ──────────────────────────────────────────────────
 function fmt(v) {
@@ -105,6 +106,27 @@ const FISICO_METRICS = [
 const MAX_METRICS_F = ['velocidadMax', 'distanciaMin', 'hsrAbsMin']
 
 // ─────────────────────────────────────────────────────────────
+function PlayerAvatar({ name, ini, size = 72 }) {
+  const photo = getPlayerPhoto(name)
+  const [imgError, setImgError] = React.useState(false)
+  if (photo && !imgError) return (
+    <img
+      src={photo}
+      alt={name}
+      onError={() => setImgError(true)}
+      style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0, border: '2px solid var(--border)' }}
+    />
+  )
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', background: RED, flexShrink: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900,
+      fontSize: size * 0.33, color: '#fff', letterSpacing: 1,
+    }}>{ini}</div>
+  )
+}
+
 export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornadas }) {
   const [selectedId, setSelectedId] = useState(PL[0]?.id || '')
   const printRef = useRef()
@@ -220,12 +242,7 @@ export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornada
 
         {/* Header jugador */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24, borderBottom: '2px solid var(--red)', paddingBottom: 20 }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: '50%', background: RED,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900,
-            fontSize: 24, color: '#fff', flexShrink: 0, letterSpacing: 1,
-          }}>{player.ini}</div>
+        <PlayerAvatar name={player.name} ini={player.ini} size={72} />
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color: '#efefef', letterSpacing: 2, textTransform: 'uppercase' }}>{player.name}</div>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, color: 'var(--gold)', letterSpacing: 2, textTransform: 'uppercase', marginTop: 2 }}>{player.pos}</div>
