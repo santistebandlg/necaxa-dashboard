@@ -81,7 +81,30 @@ function FilterDropdown({ label, options, value, onChange, color = 'var(--red)' 
   )
 }
 
-// ── Multi-select for highlighting players ─────────────────────
+// ── Range input filter ────────────────────────────────────────
+function RangeFilter({ label, minVal, maxVal, onMinChange, onMaxChange, placeholder = ['Mín', 'Máx'] }) {
+  const inputStyle = {
+    width: 64, background: '#111', border: '1px solid var(--border)', borderRadius: 3,
+    color: 'var(--white)', padding: '6px 8px', fontSize: 12,
+    fontFamily: "'Barlow', sans-serif", textAlign: 'center',
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 1, textTransform: 'uppercase' }}>{label}:</span>
+      <input
+        type="number" value={minVal} placeholder={placeholder[0]}
+        onChange={e => onMinChange(e.target.value)}
+        style={inputStyle}
+      />
+      <span style={{ fontSize: 11, color: 'var(--gray)' }}>–</span>
+      <input
+        type="number" value={maxVal} placeholder={placeholder[1]}
+        onChange={e => onMaxChange(e.target.value)}
+        style={inputStyle}
+      />
+    </div>
+  )
+}
 function PlayerMultiSelect({ allPlayers, selected, onChange }) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
@@ -165,7 +188,7 @@ function PlayerMultiSelect({ allPlayers, selected, onChange }) {
 }
 
 // ── Ranking bar chart ─────────────────────────────────────────
-function PlayerRankingChart({ rows, labels, activeTorneos, highlightPlayers, posFilter, edadFilter, minsFilter }) {
+function PlayerRankingChart({ rows, labels, activeTorneos, highlightPlayers, posFilter, edadMin, edadMax, minsMin, minsMax }) {
   const metrics = useMetrics(rows)
   const [metric, setMetric] = useState(metrics[0] || '')
   const [topN, setTopN]     = useState(20)
@@ -177,14 +200,18 @@ function PlayerRankingChart({ rows, labels, activeTorneos, highlightPlayers, pos
     return data
       .filter(p => posFilter === 'Todas' || p.posicion === posFilter)
       .filter(p => {
-        if (edadFilter === 'Todas') return true
-        const [min, max] = edadFilter.split('-').map(Number)
-        return p.edad >= min && p.edad <= (max || 99)
+        if (!edadMin && !edadMax) return true
+        const edad = p.edad || 0
+        if (edadMin && edad < Number(edadMin)) return false
+        if (edadMax && edad > Number(edadMax)) return false
+        return true
       })
       .filter(p => {
-        if (minsFilter === 'Todos') return true
-        const [min] = minsFilter.split('+').map(Number)
-        return (p.minutos || 0) >= min
+        if (!minsMin && !minsMax) return true
+        const mins = p.minutos || 0
+        if (minsMin && mins < Number(minsMin)) return false
+        if (minsMax && mins > Number(minsMax)) return false
+        return true
       })
       .sort((a, b) => b.value - a.value)
   }, [rows, labels, activeTorneos, metric, posFilter, edadFilter, minsFilter])
@@ -294,7 +321,7 @@ function PlayerRankingChart({ rows, labels, activeTorneos, highlightPlayers, pos
 }
 
 // ── Scatter chart ─────────────────────────────────────────────
-function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, posFilter, edadFilter, minsFilter }) {
+function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, posFilter, edadMin, edadMax, minsMin, minsMax }) {
   const metrics  = useMetrics(rows)
   const [metricX, setMetricX] = useState(metrics[0] || '')
   const [metricY, setMetricY] = useState(metrics[1] || '')
@@ -322,14 +349,18 @@ function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, pos
     return Object.values(byPlayer)
       .filter(p => posFilter === 'Todas' || p.posicion === posFilter)
       .filter(p => {
-        if (edadFilter === 'Todas') return true
-        const [min, max] = edadFilter.split('-').map(Number)
-        return p.edad >= min && p.edad <= (max || 99)
+        if (!edadMin && !edadMax) return true
+        const edad = p.edad || 0
+        if (edadMin && edad < Number(edadMin)) return false
+        if (edadMax && edad > Number(edadMax)) return false
+        return true
       })
       .filter(p => {
-        if (minsFilter === 'Todos') return true
-        const [min] = minsFilter.split('+').map(Number)
-        return (p.minutos || 0) >= min
+        if (!minsMin && !minsMax) return true
+        const mins = p.minutos || 0
+        if (minsMin && mins < Number(minsMin)) return false
+        if (minsMax && mins > Number(minsMax)) return false
+        return true
       })
       .map(p => ({ jugador: p.jugador, equipo: p.equipo, equipoPeriodo: p.equipoPeriodo, x: p.sumX, y: p.sumY }))
   }, [rows, labels, activeTorneos, metricX, metricY, posFilter, edadFilter, minsFilter])
@@ -470,8 +501,10 @@ export default function RankingJugadoresPanel({ raw, labels, activeTorneos }) {
   const rows = raw?.jugadoresliga || []
   const [highlightPlayers, setHighlightPlayers] = useState([])
   const [posFilter,  setPosFilter]  = useState('Todas')
-  const [edadFilter, setEdadFilter] = useState('Todas')
-  const [minsFilter, setMinsFilter] = useState('Todos')
+  const [edadMin,    setEdadMin]    = useState('')
+  const [edadMax,    setEdadMax]    = useState('')
+  const [minsMin,    setMinsMin]    = useState('')
+  const [minsMax,    setMinsMax]    = useState('')
 
   const allPlayers = useMemo(() => (
     [...new Set(rows.map(r => r.jugador).filter(Boolean))].sort()
@@ -488,21 +521,21 @@ export default function RankingJugadoresPanel({ raw, labels, activeTorneos }) {
     <div className="panel">
       {/* Global filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <FilterDropdown label="Posición" options={allPositions} value={posFilter}  onChange={setPosFilter} />
-        <FilterDropdown label="Edad"     options={edadOptions}  value={edadFilter} onChange={setEdadFilter} color={GOLD} />
-        <FilterDropdown label="Minutos"  options={minsOptions}  value={minsFilter} onChange={setMinsFilter} color={GOLD} />
+        <FilterDropdown label="Posición" options={allPositions} value={posFilter} onChange={setPosFilter} />
+        <RangeFilter label="Edad" minVal={edadMin} maxVal={edadMax} onMinChange={setEdadMin} onMaxChange={setEdadMax} />
+        <RangeFilter label="Minutos" minVal={minsMin} maxVal={minsMax} onMinChange={setMinsMin} onMaxChange={setMinsMax} placeholder={['Mín', 'Máx']} />
         <PlayerMultiSelect allPlayers={allPlayers} selected={highlightPlayers} onChange={setHighlightPlayers} />
       </div>
 
       <PlayerRankingChart
         rows={rows} labels={labels} activeTorneos={activeTorneos}
         highlightPlayers={highlightPlayers}
-        posFilter={posFilter} edadFilter={edadFilter} minsFilter={minsFilter}
+        posFilter={posFilter} edadMin={edadMin} edadMax={edadMax} minsMin={minsMin} minsMax={minsMax}
       />
       <PlayerScatterChart
         rows={rows} labels={labels} activeTorneos={activeTorneos}
         highlightPlayers={highlightPlayers}
-        posFilter={posFilter} edadFilter={edadFilter} minsFilter={minsFilter}
+        posFilter={posFilter} edadMin={edadMin} edadMax={edadMax} minsMin={minsMin} minsMax={minsMax}
       />
     </div>
   )
