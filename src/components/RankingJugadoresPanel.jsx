@@ -214,7 +214,7 @@ function PlayerRankingChart({ rows, labels, activeTorneos, highlightPlayers, pos
         return true
       })
       .sort((a, b) => b.value - a.value)
-  }, [rows, labels, activeTorneos, metric, posFilter, edadFilter, minsFilter])
+  }, [rows, labels, activeTorneos, metric, posFilter, edadMin, edadMax, minsMin, minsMax])
 
   const displayed = aggregated.slice(0, topN)
   const necaxaPlayers = aggregated.filter(p => p.equipo === NECAXA).slice(0, 6)
@@ -363,7 +363,7 @@ function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, pos
         return true
       })
       .map(p => ({ jugador: p.jugador, equipo: p.equipo, equipoPeriodo: p.equipoPeriodo, x: p.sumX, y: p.sumY }))
-  }, [rows, labels, activeTorneos, metricX, metricY, posFilter, edadFilter, minsFilter])
+  }, [rows, labels, activeTorneos, metricX, metricY, posFilter, edadMin, edadMax, minsMin, minsMax])
 
   const pointsRef = React.useRef(points)
   React.useEffect(() => { pointsRef.current = points }, [points])
