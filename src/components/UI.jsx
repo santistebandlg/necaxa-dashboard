@@ -31,6 +31,7 @@ export function Sidebar({ open, current, onNav }) {
     { id: 'duelos',         icon: '⚔️', label: 'Duelos',          group: 'Análisis' },
     { id: 'fisico',         icon: '🏃', label: 'Físico',          group: 'Análisis' },
     { id: 'rankings',       icon: '🏆', label: 'Rankings',         group: 'Liga MX' },
+    { id: 'rankjugadores',  icon: '👥', label: 'Ranking Jugadores', group: 'Liga MX' },
   ]
   const groups = ['Informes', 'Análisis', 'Liga MX']
   return (
