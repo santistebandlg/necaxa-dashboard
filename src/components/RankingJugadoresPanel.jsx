@@ -33,8 +33,8 @@ function aggregateByPlayer(rows, labels, activeTorneos, metricKey) {
   return Object.values(byPlayer).map(p => ({ ...p, value: p.sum }))
 }
 
-// ── Simple dropdown filter ────────────────────────────────────
-function FilterDropdown({ label, options, value, onChange, color = 'var(--red)' }) {
+// ── Multi-select for positions ────────────────────────────────
+function PosMultiSelect({ positions, selected, onChange }) {
   const [open, setOpen] = React.useState(false)
   const ref = React.useRef()
   React.useEffect(() => {
@@ -43,38 +43,63 @@ function FilterDropdown({ label, options, value, onChange, color = 'var(--red)' 
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
+  const toggle = (p) => {
+    const next = selected.includes(p) ? selected.filter(x => x !== p) : [...selected, p]
+    onChange(next)
+  }
+  const selectAll = () => onChange([])
+
+  const label = selected.length === 0 ? 'Todas' : selected.length === 1 ? selected[0] : `${selected.length} posiciones`
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <div onClick={() => setOpen(o => !o)} style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        background: 'var(--s2)', border: `1px solid ${open ? color : 'var(--border)'}`,
+        background: 'var(--s2)', border: `1px solid ${open ? 'var(--red)' : 'var(--border)'}`,
         borderRadius: 3, padding: '7px 12px', cursor: 'pointer',
         fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
         fontSize: 13, letterSpacing: 1, color: 'var(--white)',
-        minWidth: 160, justifyContent: 'space-between', transition: 'border-color .15s',
+        minWidth: 180, justifyContent: 'space-between', transition: 'border-color .15s',
       }}>
-        <span style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginRight: 4 }}>{label}:</span>
-        <span>{value}</span>
+        <span style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginRight: 4 }}>Posición:</span>
+        <span>{label}</span>
         <span style={{ color: 'var(--gray)', fontSize: 11, marginLeft: 4 }}>{open ? '▴' : '▾'}</span>
       </div>
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 300,
           background: '#1a1a1a', border: '1px solid var(--border)', borderRadius: 4,
-          boxShadow: '0 8px 24px rgba(0,0,0,.6)', overflow: 'hidden', maxHeight: 280, overflowY: 'auto', minWidth: 180,
+          boxShadow: '0 8px 24px rgba(0,0,0,.6)', overflow: 'hidden', maxHeight: 320, overflowY: 'auto', minWidth: 220,
         }}>
-          {options.map(opt => (
-            <div key={opt} onClick={() => { onChange(opt); setOpen(false) }} style={{
-              padding: '9px 14px', cursor: 'pointer', fontSize: 12,
-              fontFamily: "'Barlow Condensed', sans-serif", fontWeight: value === opt ? 700 : 400,
-              color: value === opt ? '#fff' : 'var(--gray3)',
-              background: value === opt ? 'rgba(200,26,26,.15)' : 'none',
-              borderBottom: '1px solid var(--border)',
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = value === opt ? 'rgba(200,26,26,.2)' : 'var(--s2)'}
-              onMouseLeave={e => e.currentTarget.style.background = value === opt ? 'rgba(200,26,26,.15)' : 'none'}
-            >{opt}</div>
-          ))}
+          <div style={{ borderBottom: '1px solid var(--border)' }}>
+            <button onClick={selectAll} style={{
+              width: '100%', background: 'none', border: 'none', color: 'var(--gray3)',
+              fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11,
+              letterSpacing: 1, padding: '7px 14px', cursor: 'pointer', textTransform: 'uppercase', textAlign: 'left',
+            }}>Todas las posiciones</button>
+          </div>
+          {positions.map(p => {
+            const isSel = selected.includes(p)
+            return (
+              <div key={p} onClick={() => toggle(p)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', cursor: 'pointer',
+                background: isSel ? 'rgba(200,26,26,.12)' : 'none', borderBottom: '1px solid var(--border)',
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = isSel ? 'rgba(200,26,26,.18)' : 'var(--s2)'}
+                onMouseLeave={e => e.currentTarget.style.background = isSel ? 'rgba(200,26,26,.12)' : 'none'}
+              >
+                <div style={{
+                  width: 14, height: 14, borderRadius: 2, flexShrink: 0,
+                  border: `2px solid ${isSel ? 'var(--red)' : 'var(--gray2)'}`,
+                  background: isSel ? 'var(--red)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {isSel && <span style={{ color: '#fff', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                </div>
+                <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: isSel ? 700 : 400, fontSize: 12, color: isSel ? 'var(--white)' : 'var(--gray3)' }}>{p}</span>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -198,7 +223,7 @@ function PlayerRankingChart({ rows, labels, activeTorneos, highlightPlayers, pos
   const aggregated = useMemo(() => {
     const data = aggregateByPlayer(rows, labels, activeTorneos, metric)
     return data
-      .filter(p => posFilter === 'Todas' || p.posicion === posFilter)
+      .filter(p => posFilter.length === 0 || posFilter.includes(p.posicion))
       .filter(p => {
         if (!edadMin && !edadMax) return true
         const edad = p.edad || 0
@@ -347,7 +372,7 @@ function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, pos
       if (r['Edad']) byPlayer[key].edad = r['Edad']
     })
     return Object.values(byPlayer)
-      .filter(p => posFilter === 'Todas' || p.posicion === posFilter)
+      .filter(p => posFilter.length === 0 || posFilter.includes(p.posicion))
       .filter(p => {
         if (!edadMin && !edadMax) return true
         const edad = p.edad || 0
@@ -500,7 +525,7 @@ function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, pos
 export default function RankingJugadoresPanel({ raw, labels, activeTorneos }) {
   const rows = raw?.jugadoresliga || []
   const [highlightPlayers, setHighlightPlayers] = useState([])
-  const [posFilter,  setPosFilter]  = useState('Todas')
+  const [posFilter,  setPosFilter]  = useState([])
   const [edadMin,    setEdadMin]    = useState('')
   const [edadMax,    setEdadMax]    = useState('')
   const [minsMin,    setMinsMin]    = useState('')
@@ -511,7 +536,7 @@ export default function RankingJugadoresPanel({ raw, labels, activeTorneos }) {
   ), [rows])
 
   const allPositions = useMemo(() => (
-    ['Todas', ...[...new Set(rows.map(r => r.posicion).filter(Boolean))].sort()]
+    [...new Set(rows.map(r => r.posicion).filter(Boolean))].sort()
   ), [rows])
 
   const edadOptions  = ['Todas', '16-20', '21-23', '24-26', '27-29', '30-32', '33+']
@@ -521,7 +546,7 @@ export default function RankingJugadoresPanel({ raw, labels, activeTorneos }) {
     <div className="panel">
       {/* Global filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <FilterDropdown label="Posición" options={allPositions} value={posFilter} onChange={setPosFilter} />
+        <PosMultiSelect positions={allPositions} selected={posFilter} onChange={setPosFilter} />
         <RangeFilter label="Edad" minVal={edadMin} maxVal={edadMax} onMinChange={setEdadMin} onMaxChange={setEdadMax} />
         <RangeFilter label="Minutos" minVal={minsMin} maxVal={minsMax} onMinChange={setMinsMin} onMaxChange={setMinsMax} placeholder={['Mín', 'Máx']} />
         <PlayerMultiSelect allPlayers={allPlayers} selected={highlightPlayers} onChange={setHighlightPlayers} />
