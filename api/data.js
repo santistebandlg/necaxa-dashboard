@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET')
 
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyLiNmUunYpYNAn2j7YtV-m4yeT2YReGyhF3Jj15M51KjApIoh1QsYgmRcaYL4puVDdeQ/exec'
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycby0kD2Jrr5qTJoxLzOz22Nh0ftNXnhns4pJZfiFM-iJL7h9aHRZqHaa6cP00XgEXsVB0w/exec'
 
   try {
     const response = await fetch(`${GAS_URL}?action=all`, {

@@ -3,7 +3,7 @@ import { Bar, Scatter } from 'react-chartjs-2'
 import { RED, GOLD, WHT, GRID } from '../utils/chartUtils'
 
 const NECAXA = 'Necaxa'
-const EXCLUDE_COLS = ['jugador','equipo','posicion','jornada','temporada','liga']
+const EXCLUDE_COLS = ['jugador','equipo','equipoPeriodo','posicion','jornada','temporada','liga']
 
 function useMetrics(rows) {
   return useMemo(() => {
@@ -20,7 +20,7 @@ function aggregateByPlayer(rows, labels, activeTorneos, metricKey) {
     if (activeTorneos?.length && !activeTorneos.includes(r.temporada)) return
     const key = r.jugador + '|' + r.equipo
     if (!byPlayer[key]) byPlayer[key] = {
-      jugador: r.jugador, equipo: r.equipo, posicion: r.posicion,
+      jugador: r.jugador, equipo: r.equipo, equipoPeriodo: r.equipoPeriodo, posicion: r.posicion,
       edad: r['Edad'], minutos: r['Minutos jugados'] || r['Minutos'],
       sum: 0, count: 0
     }
@@ -252,7 +252,7 @@ function PlayerRankingChart({ rows, labels, activeTorneos, highlightPlayers, pos
       <div style={{ height: barH }}>
         <Bar
           data={{
-            labels: displayed.map(p => `${p.jugador} (${p.equipo})`),
+            labels: displayed.map(p => `${p.jugador} (${p.equipoPeriodo || p.equipo})`),
             datasets: [{
               data: displayed.map(p => +p.value.toFixed(2)),
               backgroundColor: displayed.map(p => getColor(p)),
@@ -311,7 +311,7 @@ function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, pos
       if (activeTorneos?.length && !activeTorneos.includes(r.temporada)) return
       const key = r.jugador + '|' + r.equipo
       if (!byPlayer[key]) byPlayer[key] = {
-        jugador: r.jugador, equipo: r.equipo, posicion: r.posicion,
+        jugador: r.jugador, equipo: r.equipo, equipoPeriodo: r.equipoPeriodo, posicion: r.posicion,
         edad: r['Edad'], minutos: 0, sumX: 0, sumY: 0,
       }
       byPlayer[key].sumX += (r[metricX] || 0)
@@ -331,7 +331,7 @@ function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, pos
         const [min] = minsFilter.split('+').map(Number)
         return (p.minutos || 0) >= min
       })
-      .map(p => ({ jugador: p.jugador, equipo: p.equipo, x: p.sumX, y: p.sumY }))
+      .map(p => ({ jugador: p.jugador, equipo: p.equipo, equipoPeriodo: p.equipoPeriodo, x: p.sumX, y: p.sumY }))
   }, [rows, labels, activeTorneos, metricX, metricY, posFilter, edadFilter, minsFilter])
 
   const pointsRef = React.useRef(points)
@@ -438,7 +438,7 @@ function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, pos
                 callbacks: {
                   label: (ctx) => {
                     const pt = points[ctx.dataIndex]
-                    return `${pt?.jugador} (${pt?.equipo}): (${ctx.parsed.x.toFixed(2)}, ${ctx.parsed.y.toFixed(2)})`
+                    return `${pt?.jugador} (${pt?.equipoPeriodo || pt?.equipo}: (${ctx.parsed.x.toFixed(2)}, ${ctx.parsed.y.toFixed(2)})`
                   }
                 }
               }
