@@ -29,7 +29,7 @@ export const PLAYER_PHOTOS = {
   'julian carranza':        '/players/Julián Carranza.jpg',
   'tomás badaloni':         '/players/Tomás Badaloni.jpg',
   'tomas badaloni':         '/players/Tomás Badaloni.jpg',
-  'bryan casas':            '/players/Bryan Casas.jpg',
+  'joshua palacios':        '/players/Joshua Palacios.png',
 }
 
 export function getPlayerPhoto(name) {

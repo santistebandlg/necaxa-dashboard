@@ -93,6 +93,7 @@ const PLAYER_ROLES = {
   'daniel leyva':           'pivote',
   'kevin gutiérrez':        'pivote',
   'kevin gutierrez':        'pivote',
+  'joshua palacios':        'pivote',
   'rogelio cortéz':         'int_def',
   'rogelio cortez':         'int_def',
   'agustín almendra':       'int_ofe',
