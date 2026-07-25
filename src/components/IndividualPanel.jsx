@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { StatBarChart } from './Charts'
 import { RED, GOLD, WHT } from '../utils/chartUtils'
 import { getPlayerPhoto } from '../utils/playerPhotos'
+import { ROLE_LABELS, getStatsByRole } from '../hooks/useSheetData'
 
 const ROLE_ORDER = [
   'Portero','Stopper Izquierdo','Libero','Stopper Derecho',
@@ -55,13 +56,24 @@ function PlayerAvatar({ name, ini, size = 72 }) {
 
 export default function IndividualPanel({ PL, labels, allJornadas }) {
   const [selectedId, setSelectedId] = useState(PL[0]?.id || '')
-  const player = PL.find(p => p.id === selectedId) || PL[0]
+  const [roleOverrides, setRoleOverrides] = useState({}) // { [playerId]: roleKey }
+  const basePlayer = PL.find(p => p.id === selectedId) || PL[0]
 
-  if (!player) return (
+  if (!basePlayer) return (
     <div className="panel">
       <div className="empty"><div className="big">👤</div><p>No hay jugadores disponibles</p></div>
     </div>
   )
+
+  const overrideRole = roleOverrides[basePlayer.id]
+  const hasOverride = !!overrideRole && overrideRole !== basePlayer.defaultRole
+  const player = hasOverride
+    ? {
+        ...basePlayer,
+        pos: ROLE_LABELS[overrideRole] || basePlayer.pos,
+        stats: getStatsByRole(basePlayer.name, allJornadas, basePlayer.rawByJ, overrideRole),
+      }
+    : basePlayer
 
   const ROLE_DISPLAY_ORDER = [
     'Portero','Stopper Izquierdo','Libero','Stopper Derecho',
@@ -90,7 +102,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
   return (
     <div className="panel">
       {/* Grouped player selector */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 24, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <div className="csel">
           <select value={selectedId} onChange={e => setSelectedId(e.target.value)} style={{ minWidth: 280 }}>
             {Object.entries(roleGroups).map(([role, players]) =>
@@ -104,6 +116,35 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
             )}
           </select>
         </div>
+
+        <div className="csel">
+          <select
+            value={overrideRole || basePlayer.defaultRole || ''}
+            onChange={e => setRoleOverrides(prev => ({ ...prev, [basePlayer.id]: e.target.value }))}
+            style={{ minWidth: 220 }}
+            title="Ver métricas de este jugador como si jugara en otra posición"
+          >
+            {Object.entries(ROLE_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        </div>
+
+        {hasOverride && (
+          <button
+            onClick={() => setRoleOverrides(prev => {
+              const next = { ...prev }
+              delete next[basePlayer.id]
+              return next
+            })}
+            style={{
+              background: 'transparent', border: '1px solid var(--border)', borderRadius: 6,
+              padding: '6px 12px', color: 'var(--gray3)', fontSize: 12, cursor: 'pointer',
+            }}
+          >
+            ↺ Restablecer posición original ({ROLE_LABELS[basePlayer.defaultRole] || basePlayer.pos})
+          </button>
+        )}
       </div>
 
       {/* Player header */}

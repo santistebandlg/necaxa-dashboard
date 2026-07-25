@@ -77,7 +77,6 @@ function processColectivo(rows, jornadas, rivalRows) {
 
 // Direct player → role mapping (ignores posicion field from Sheet)
 const PLAYER_ROLES = {
-  'ezequiel unsain':        'portero',
   'agustín oliveros':       'stopper_izq',
   'agustin oliveros':       'stopper_izq',
   'francisco méndez':       'stopper_izq',
@@ -86,34 +85,34 @@ const PLAYER_ROLES = {
   'alexis pena':            'libero',
   'raúl martínez':          'stopper_der',
   'raul martinez':          'stopper_der',
-  'emilio lara':            'stopper_der',
-  'ricardo alonso':         'stopper_der',
-  'cristian calderón':      'lateral',
-  'cristian calderon':      'lateral',
   'daniel leyva':           'pivote',
-  'kevin gutiérrez':        'pivote',
-  'kevin gutierrez':        'pivote',
   'joshua palacios':        'pivote',
   'rogelio cortéz':         'int_def',
   'rogelio cortez':         'int_def',
-  'agustín almendra':       'int_ofe',
-  'agustin almendra':       'int_ofe',
   'israel tello':           'int_ofe',
-  'raúl sánchez':           'int_ofe',
-  'raul sanchez':           'int_ofe',
-  'franco rossano':         'ext_lat',
   'ricardo monreal':        'extremo',
   'kevin rosero':           'extremo',
   'javier ruiz':            'extremo',
   'lorenzo faravelli':      'int_def_ofe',
   'julián carranza':        'delantero',
   'julian carranza':        'delantero',
-  'tomás badaloni':         'delantero',
-  'tomas badaloni':         'delantero',
-  'bryan casas':            'delantero',
+  // -- altas Apertura 26/27 --
+  'christopher andrade':    'portero',
+  'diego ochoa':            'stopper_der',
+  'kaiky naves':            'libero',
+  'mauro zaleta':           'lateral',
+  'carlos vargas':          'lateral',
+  'emilio rodríguez':       'extremo',
+  'emilio rodriguez':       'extremo',
+  'pedro pedraza':          'pivote',
+  'matías espíndola':       'int_ofe',
+  'matias espindola':       'int_ofe',
+  'juan pablo torres':      'int_ofe',
+  'juan valencia':          'delantero',
+  'misael pedroza':         'delantero',
 }
 
-const ROLE_LABELS = {
+export const ROLE_LABELS = {
   portero:      'Portero',
   stopper_izq:  'Stopper Izquierdo',
   libero:       'Libero',
@@ -132,8 +131,8 @@ function getRole(name) {
   return PLAYER_ROLES[(name || '').toLowerCase().trim()] || 'fallback'
 }
 
-function getStatsByRole(name, jornadas, jornadaData) {
-  const role = getRole(name)
+export function getStatsByRole(name, jornadas, jornadaData, roleOverride) {
+  const role = roleOverride || getRole(name)
 
   const lastJ = [...jornadas].reverse().find(j => jornadaData[j])
   const lastR = jornadaData[lastJ] || {}
@@ -331,7 +330,7 @@ function processJugadores(rows, jornadas) {
     const role  = getRole(p.name)
     const stats = getStatsByRole(p.name, jornadas, p.jornadaData)
     const displayRole = ROLE_LABELS[role] || p.pos || 'Sin posición'
-    return { id: p.id, name: p.name, pos: displayRole, ini: p.ini, mins, pct, stats, lastJ, rawByJ: p.jornadaData }
+    return { id: p.id, name: p.name, pos: displayRole, defaultRole: role, ini: p.ini, mins, pct, stats, lastJ, rawByJ: p.jornadaData }
   })
 
   return players.sort((a, b) => {
