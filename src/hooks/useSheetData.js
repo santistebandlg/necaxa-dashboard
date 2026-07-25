@@ -307,7 +307,7 @@ export function getStatsByRole(name, jornadas, jornadaData, roleOverride) {
   ]
 }
 
-function processJugadores(rows, jornadas) {
+export function processJugadores(rows, jornadas) {
   const jugMap = {}
   rows.forEach(r => {
     const nombre = r.jugador

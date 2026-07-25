@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import useSheetData from './hooks/useSheetData'
+import useSheetData, { processJugadores } from './hooks/useSheetData'
 import { Header, Sidebar, JornadaFilter, TorneoFilter, Loading, ErrorState } from './components/UI'
 import ColectivoPanel from './components/ColectivoPanel'
 import IndividualPanel from './components/IndividualPanel'
@@ -42,6 +42,18 @@ function Dashboard() {
     )
     return jornadas.filter(j => jornadasDelTorneo.has(j))
   }, [effectiveTorneos, jornadas, raw, torneos])
+
+  // Jugadores filtrados por torneo — mismo patrón que Recuperaciones/Duelos/Perfil:
+  // filtra por el campo torneo de cada fila, con fallback a todo si viene inconsistente
+  const PLFiltered = useMemo(() => {
+    if (!raw?.jugadores) return PL
+    if (!effectiveTorneos.length || effectiveTorneos.length === torneos.length) {
+      return processJugadores(raw.jugadores, jornadasFiltered)
+    }
+    const filteredRows = raw.jugadores.filter(r => effectiveTorneos.includes(r.torneo))
+    const rows = filteredRows.length ? filteredRows : raw.jugadores
+    return processJugadores(rows, jornadasFiltered)
+  }, [raw, effectiveTorneos, torneos, jornadasFiltered, PL])
 
   // Jornadas del físico (independientes de colectivo)
   const jornadasFisico = useMemo(() => {
@@ -113,7 +125,7 @@ function Dashboard() {
 
   const panels = {
     colectivo:      <ColectivoPanel D={filteredD(D)} labels={activeLabels} PL={PL} jornadaLabel={badge} />,
-    individual:     <IndividualPanel PL={PL} labels={activeLabels} allJornadas={jornadasFiltered} />,
+    individual:     <IndividualPanel PL={PLFiltered} labels={activeLabels} allJornadas={jornadasFiltered} />,
     perfil:         <PerfilPanel PL={PL} raw={raw} labels={activeLabels} activeTorneos={effectiveTorneos} allJornadas={jornadasFiltered} />,
     recuperaciones: <RecuperacionesPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,
     balones:        <BalonesPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,
