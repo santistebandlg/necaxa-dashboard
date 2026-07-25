@@ -108,7 +108,10 @@ const PLAYER_ROLES = {
   'matías espíndola':       'int_ofe',
   'matias espindola':       'int_ofe',
   'juan pablo torres':      'int_ofe',
+  'juan torres':            'int_ofe',
   'juan valencia':          'delantero',
+  'luis jiménez':           'portero',
+  'luis jimenez':           'portero',
   'misael pedroza':         'delantero',
 }
 
