@@ -140,14 +140,23 @@ export function getStatsByRole(name, jornadas, jornadaData, roleOverride) {
   const lastJ = [...jornadas].reverse().find(j => jornadaData[j])
   const lastR = jornadaData[lastJ] || {}
 
-  const row = (lbl, totalF, logradoF, pctF, chartF, c) => ({
-    lbl,
-    total:     lastR[totalF]   != null ? num(lastR[totalF])   : null,
-    logrado:   logradoF        ? (lastR[logradoF] != null ? num(lastR[logradoF]) : null) : null,
-    pct:       pctF            ? (lastR[pctF]     != null ? num(lastR[pctF])     : null) : null,
-    chartData: jornadas.map(j => num(jornadaData[j]?.[chartF] || 0)),
-    c: c || 'r',
-  })
+  const row = (lbl, totalF, logradoF, pctF, chartF, c) => {
+    const total   = lastR[totalF] != null ? num(lastR[totalF]) : null
+    const logrado = logradoF ? (lastR[logradoF] != null ? num(lastR[logradoF]) : null) : null
+    let pct = null
+    if (pctF) {
+      if (logrado != null && total) pct = logrado / total
+      else if (lastR[pctF] != null) pct = num(lastR[pctF]) // fallback si no hay total/logrado para calcularlo
+    }
+    return {
+      lbl,
+      total,
+      logrado,
+      pct,
+      chartData: jornadas.map(j => num(jornadaData[j]?.[chartF] || 0)),
+      c: c || 'r',
+    }
+  }
 
   if (role === 'portero') return [
     row('Goles recibidos / xGA',        'golesRecibidos',  'xG',              null,             'golesRecibidos',  'r'),
