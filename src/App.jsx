@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import useSheetData, { processJugadores } from './hooks/useSheetData'
+import useSheetData, { processJugadores, processColectivo } from './hooks/useSheetData'
 import { Header, Sidebar, JornadaFilter, TorneoFilter, Loading, ErrorState } from './components/UI'
 import ColectivoPanel from './components/ColectivoPanel'
 import IndividualPanel from './components/IndividualPanel'
@@ -55,6 +55,22 @@ function Dashboard() {
     return processJugadores(rows, jornadasFiltered)
   }, [raw, effectiveTorneos, torneos, jornadasFiltered, PL])
 
+  // Colectivo (D) recalculado por torneo — antes se armaba UNA sola vez con
+  // TODAS las jornadas de todos los torneos, y como las etiquetas de jornada
+  // (ej. "J1") se repiten entre torneos, byJ[j] = rows.find(...) siempre
+  // devolvía la primera coincidencia global, sin importar el torneo activo.
+  const DFiltered = useMemo(() => {
+    if (!raw?.colectivo) return D
+    let colRows   = raw.colectivo.filter(r => r.equipo === 'Necaxa' || r['Equipo'] === 'Necaxa')
+    let rivalRows = raw.colectivo.filter(r => r.equipo !== 'Necaxa' && r['Equipo'] !== 'Necaxa')
+    if (effectiveTorneos.length && effectiveTorneos.length !== torneos.length) {
+      const colF = colRows.filter(r => effectiveTorneos.includes(r.torneo))
+      const rivF = rivalRows.filter(r => effectiveTorneos.includes(r.torneo))
+      if (colF.length) { colRows = colF; rivalRows = rivF } // fallback si torneo viene inconsistente
+    }
+    return processColectivo(colRows, jornadasFiltered, rivalRows)
+  }, [raw, effectiveTorneos, torneos, jornadasFiltered, D])
+
   // Jornadas del físico (independientes de colectivo)
   const jornadasFisico = useMemo(() => {
     if (!raw?.fisico) return []
@@ -78,13 +94,15 @@ function Dashboard() {
   // Map selected indices to label strings for current panel
   const activeLabels = effectiveJ.map(i => currentJornadas[i]).filter(Boolean)
 
-  // For colectivo D filtering we still need index-based approach against full jornadas
+  // For colectivo D filtering we still need index-based approach against the
+  // torneo-scoped jornadas list (jornadasFiltered), since DFiltered's arrays
+  // are now built in that same order.
   const filteredD = (d) => {
     if (!d || !Object.keys(d).length) return d
     const filterArr = arr => {
       if (!Array.isArray(arr)) return arr
       return activeLabels.map(lbl => {
-        const fi = jornadas.indexOf(lbl)
+        const fi = jornadasFiltered.indexOf(lbl)
         return fi >= 0 ? (arr[fi] ?? 0) : 0
       })
     }
@@ -124,7 +142,7 @@ function Dashboard() {
   )
 
   const panels = {
-    colectivo:      <ColectivoPanel D={filteredD(D)} labels={activeLabels} PL={PL} jornadaLabel={badge} />,
+    colectivo:      <ColectivoPanel D={filteredD(DFiltered)} labels={activeLabels} PL={PL} jornadaLabel={badge} />,
     individual:     <IndividualPanel PL={PLFiltered} labels={activeLabels} allJornadas={jornadasFiltered} />,
     perfil:         <PerfilPanel PL={PL} raw={raw} labels={activeLabels} activeTorneos={effectiveTorneos} allJornadas={jornadasFiltered} />,
     recuperaciones: <RecuperacionesPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,

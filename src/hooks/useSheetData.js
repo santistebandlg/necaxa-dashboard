@@ -21,7 +21,7 @@ const ROLE_ORDER = [
   'Delantero',
 ]
 
-function processColectivo(rows, jornadas, rivalRows) {
+export function processColectivo(rows, jornadas, rivalRows) {
   const byJ = {}
   jornadas.forEach(j => { byJ[j] = rows.find(r => r.jornada === j) || {} })
 
