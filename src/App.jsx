@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import useSheetData, { processJugadores, processColectivo } from './hooks/useSheetData'
+import useSheetData, { processJugadores, processColectivo, jKey, jParts, formatJornadaLabels } from './hooks/useSheetData'
 import { Header, Sidebar, JornadaFilter, TorneoFilter, Loading, ErrorState } from './components/UI'
 import ColectivoPanel from './components/ColectivoPanel'
 import IndividualPanel from './components/IndividualPanel'
@@ -38,7 +38,7 @@ function Dashboard() {
       raw.colectivo
         .filter(r => effectiveTorneos.includes(r.torneo) &&
           (r.equipo === 'Necaxa' || r['Equipo'] === 'Necaxa'))
-        .map(r => r.jornada)
+        .map(r => jKey(r.torneo, r.jornada))
     )
     return jornadas.filter(j => jornadasDelTorneo.has(j))
   }, [effectiveTorneos, jornadas, raw, torneos])
@@ -77,8 +77,12 @@ function Dashboard() {
     const filtered = activeTorneos.length
       ? raw.fisico.filter(r => activeTorneos.includes(r.torneo))
       : raw.fisico
-    const set = [...new Set(filtered.map(r => r.jornada).filter(Boolean))]
-    return set.sort((a, b) => parseInt(String(a).replace(/\D/g,'')) - parseInt(String(b).replace(/\D/g,'')))
+    const set = [...new Set(filtered.map(r => jKey(r.torneo, r.jornada)).filter(Boolean))]
+    return set.sort((a, b) => {
+      const pa = jParts(a), pb = jParts(b)
+      if (pa.torneo !== pb.torneo) return pa.torneo.localeCompare(pb.torneo)
+      return parseInt(String(pa.jornada).replace(/\D/g,'')) - parseInt(String(pb.jornada).replace(/\D/g,''))
+    })
   }, [raw, activeTorneos])
 
   // Active jornadas — shared, mapped against current panel's jornada list
@@ -121,8 +125,9 @@ function Dashboard() {
   const badge = useMemo(() => {
     const torneoLabel = effectiveTorneos.length === torneos.length || !torneos.length
       ? '' : effectiveTorneos.length === 1 ? `${effectiveTorneos[0]} · ` : `${effectiveTorneos.length} torneos · `
-    const labels = activeJ.length ? activeJ.map(i => jornadasFiltered[i]).filter(Boolean) : jornadasFiltered
-    if (!labels.length) return 'Sin datos'
+    const keys = activeJ.length ? activeJ.map(i => jornadasFiltered[i]).filter(Boolean) : jornadasFiltered
+    if (!keys.length) return 'Sin datos'
+    const labels = keys.map(k => jParts(k).jornada)
     if (labels.length === 1) return `${torneoLabel}${labels[0]}`
     return `${torneoLabel}${labels[0]}–${labels[labels.length - 1]}`
   }, [activeJ, jornadasFiltered, effectiveTorneos, torneos])
@@ -178,7 +183,7 @@ function Dashboard() {
                 />
               )}
               <JornadaFilter
-                jornadas={currentJornadas}
+                jornadas={formatJornadaLabels(currentJornadas)}
                 active={effectiveJ}
                 onChange={setActiveJ}
               />

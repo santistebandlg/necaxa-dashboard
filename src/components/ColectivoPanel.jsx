@@ -7,6 +7,7 @@ import {
 import { SectionHeader, PhaseDivider, Card, Legend, XGBar } from './UI'
 import { RED, GOLD, WHT, GRN, GRID } from '../utils/chartUtils'
 import PDFExportButton from './PDFExport'
+import { formatJornadaLabels } from '../hooks/useSheetData'
 
 // Card wrapper that adds a pdf-capture id
 function ChartCard({ id, title, children }) {
@@ -17,7 +18,8 @@ function ChartCard({ id, title, children }) {
   )
 }
 
-export default function ColectivoPanel({ D, labels, jornadaLabel }) {
+export default function ColectivoPanel({ D, labels: rawLabels, jornadaLabel }) {
+  const labels = formatJornadaLabels(rawLabels)
 
   return (
     <div className="panel">

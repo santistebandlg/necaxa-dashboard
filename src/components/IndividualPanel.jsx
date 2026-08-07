@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { StatBarChart } from './Charts'
 import { RED, GOLD, WHT } from '../utils/chartUtils'
 import { getPlayerPhoto } from '../utils/playerPhotos'
-import { ROLE_LABELS, getStatsByRole } from '../hooks/useSheetData'
+import { ROLE_LABELS, getStatsByRole, formatJornadaLabels, jLabel } from '../hooks/useSheetData'
 
 const ROLE_ORDER = [
   'Portero','Stopper Izquierdo','Libero','Stopper Derecho',
@@ -157,7 +157,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
             <span>⏱ <strong>{player.mins}'</strong></span>
             <span><strong>{player.pct}%</strong> del partido</span>
             <span style={{ color: 'var(--gold)', fontSize: 11, letterSpacing: 1 }}>
-              ★ Última jornada: {player.lastJ}
+              ★ Última jornada: {jLabel(player.lastJ, true)}
             </span>
           </div>
         </div>
@@ -178,7 +178,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
               fontWeight: 800, fontSize: 13, letterSpacing: 2,
               textTransform: 'uppercase', color: 'var(--gray3)',
             }}>
-              Estadísticas — {player.lastJ}
+              Estadísticas — {jLabel(player.lastJ, true)}
             </div>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -227,7 +227,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
                 </strong>
               </div>
               <StatBarChart
-                labels={labels}
+                labels={formatJornadaLabels(labels)}
                 data={st.filteredData}
                 color={colorMap[st.c] || RED}
                 height={130}

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Bar, Scatter } from 'react-chartjs-2'
 import { RED, GOLD, WHT, GRID } from '../utils/chartUtils'
+import { jParts } from '../hooks/useSheetData'
 
 const NECAXA = 'Necaxa'
 const EXCLUDE_COLS = ['jugador','equipo','equipoPeriodo','posicion','jornada','temporada','liga']
@@ -15,8 +16,9 @@ function useMetrics(rows) {
 
 function aggregateByPlayer(rows, labels, activeTorneos, metricKey) {
   const byPlayer = {}
+  const plainLabels = labels?.length ? labels.map(l => jParts(l).jornada) : labels
   rows.forEach(r => {
-    if (labels?.length && !labels.includes(r.jornada)) return
+    if (plainLabels?.length && !plainLabels.includes(r.jornada)) return
     if (activeTorneos?.length && !activeTorneos.includes(r.temporada)) return
     const key = r.jugador + '|' + r.equipo
     if (!byPlayer[key]) byPlayer[key] = {
@@ -358,8 +360,9 @@ function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, pos
 
   const points = useMemo(() => {
     const byPlayer = {}
+    const plainLabels = labels?.length ? labels.map(l => jParts(l).jornada) : labels
     rows.forEach(r => {
-      if (labels?.length && !labels.includes(r.jornada)) return
+      if (plainLabels?.length && !plainLabels.includes(r.jornada)) return
       if (activeTorneos?.length && !activeTorneos.includes(r.temporada)) return
       const key = r.jugador + '|' + r.equipo
       if (!byPlayer[key]) byPlayer[key] = {

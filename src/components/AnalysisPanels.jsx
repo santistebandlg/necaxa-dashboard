@@ -3,6 +3,7 @@ import { Bar } from 'react-chartjs-2'
 import { SectionHeader, Card } from './UI'
 import { RED, GOLD, WHT, GRN, GRID } from '../utils/chartUtils'
 import PitchMap from './PitchMap'
+import { jKey, formatJornadaLabels } from '../hooks/useSheetData'
 
 function getLastStat(player, ...labels) {
   for (const lbl of labels) {
@@ -17,7 +18,7 @@ const EXCLUDED_PLAYERS = ['desconocido', 'fj', 'f', 'fl', '']
 function filterEvents(events, labels, activeTorneos) {
   if (!events || !labels || labels.length === 0) return []
   return events.filter(e => {
-    if (!labels.includes(e.jornada)) return false
+    if (!labels.includes(jKey(e.torneo, e.jornada))) return false
     if (activeTorneos && activeTorneos.length > 0) {
       if (!activeTorneos.includes(e.torneo)) return false
     }
@@ -33,10 +34,11 @@ function buildStackedFromEvents(events, labels, groupField) {
   const byJornada = {}
   labels.forEach(j => { byJornada[j] = {} })
   events.forEach(e => {
-    if (!labels.includes(e.jornada)) return
+    const k = jKey(e.torneo, e.jornada)
+    if (!labels.includes(k)) return
     const g = e[groupField] || 'Sin dato'
-    if (!byJornada[e.jornada]) byJornada[e.jornada] = {}
-    byJornada[e.jornada][g] = (byJornada[e.jornada][g] || 0) + 1
+    if (!byJornada[k]) byJornada[k] = {}
+    byJornada[k][g] = (byJornada[k][g] || 0) + 1
   })
   return { groups, byJornada }
 }
@@ -57,7 +59,7 @@ function AccionChart({ events, labels, height = 200 }) {
   return (
     <Bar
       height={height}
-      data={{ labels, datasets }}
+      data={{ labels: formatJornadaLabels(labels), datasets }}
       options={{
         responsive: true, maintainAspectRatio: true,
         plugins: { legend: { display: true, labels: { color: '#777', font: { size: 10 }, boxWidth: 12, padding: 8 } } },
@@ -397,14 +399,14 @@ export function FisicoPanel({ raw, labels, activeTorneos }) {
 
   const events = useMemo(() => {
     if (!raw?.fisico) return []
-    const fisicoJornadas = [...new Set(raw.fisico.map(e => e.jornada).filter(Boolean))]
+    const fisicoJornadas = [...new Set(raw.fisico.map(e => jKey(e.torneo, e.jornada)).filter(Boolean))]
     const activeLabels = labels && labels.length
       ? labels.filter(l => fisicoJornadas.includes(l))
       : fisicoJornadas
 
     // First try with torneo filter
     let filtered = raw.fisico.filter(e => {
-      if (activeLabels.length && !activeLabels.includes(e.jornada)) return false
+      if (activeLabels.length && !activeLabels.includes(jKey(e.torneo, e.jornada))) return false
       if (activeTorneos && activeTorneos.length) {
         if (!activeTorneos.includes(e.torneo)) return false
       }
@@ -416,7 +418,7 @@ export function FisicoPanel({ raw, labels, activeTorneos }) {
     // If torneo filter yields nothing, ignore it (torneo field may be inconsistent)
     if (filtered.length === 0) {
       filtered = raw.fisico.filter(e => {
-        if (activeLabels.length && !activeLabels.includes(e.jornada)) return false
+        if (activeLabels.length && !activeLabels.includes(jKey(e.torneo, e.jornada))) return false
         const name = (e.jugador || '').trim().toLowerCase()
         if (EXCLUDED_PLAYERS.includes(name)) return false
         return true

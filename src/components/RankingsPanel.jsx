@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Bar, Scatter } from 'react-chartjs-2'
 import { RED, GOLD, WHT, GRID } from '../utils/chartUtils'
+import { jKey, formatJornadaLabels } from '../hooks/useSheetData'
 
 const NECAXA = 'Necaxa'
 
@@ -19,7 +20,7 @@ function useMetrics(rows) {
 function aggregateByTeam(rows, labels, activeTorneos, metricKey) {
   const byTeam = {}
   rows.forEach(r => {
-    if (labels?.length && !labels.includes(r.jornada)) return
+    if (labels?.length && !labels.includes(jKey(r.torneo, r.jornada))) return
     if (activeTorneos?.length && !activeTorneos.includes(r.torneo)) return
     const eq = r.equipo || r.Equipo || ''
     if (!eq) return
@@ -56,23 +57,30 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
   const jornadaData = useMemo(() => {
     if (!showJornada) return null
     const jornadas = [...new Set(
-      rows.filter(r => (!activeTorneos?.length || activeTorneos.includes(r.torneo))).map(r => r.jornada).filter(Boolean)
-    )].sort((a, b) => parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,'')))
+      rows
+        .filter(r => (!activeTorneos?.length || activeTorneos.includes(r.torneo)))
+        .map(r => jKey(r.torneo, r.jornada))
+        .filter(Boolean)
+    )].sort((a, b) => {
+      const [ta, ja] = a.split('\u241F'), [tb, jb] = b.split('\u241F')
+      if (ta !== tb) return ta.localeCompare(tb)
+      return parseInt(String(ja).replace(/\D/g,'')) - parseInt(String(jb).replace(/\D/g,''))
+    })
     const filtered = labels?.length ? jornadas.filter(j => labels.includes(j)) : jornadas
     const allTeams = [...new Set(rows.map(r => r.equipo || r.Equipo).filter(Boolean))]
     const necaxaVals = filtered.map(j => {
-      const row = rows.find(r => r.jornada === j && (r.equipo === NECAXA || r.Equipo === NECAXA) && (!activeTorneos?.length || activeTorneos.includes(r.torneo)))
+      const row = rows.find(r => jKey(r.torneo, r.jornada) === j && (r.equipo === NECAXA || r.Equipo === NECAXA))
       return row ? (row[metric] || 0) : 0
     })
     const rankPerJ = filtered.map((j, ji) => {
       const allVals = allTeams.map(eq => {
-        const row = rows.find(r => r.jornada === j && (r.equipo === eq || r.Equipo === eq) && (!activeTorneos?.length || activeTorneos.includes(r.torneo)))
+        const row = rows.find(r => jKey(r.torneo, r.jornada) === j && (r.equipo === eq || r.Equipo === eq))
         return row ? (row[metric] || 0) : 0
       }).sort((a, b) => b - a)
       const necVal = necaxaVals[ji]
       return allVals.indexOf(necVal) + 1
     })
-    return { jornadas: filtered, necaxaVals, rankPerJ }
+    return { jornadas: filtered, jornadasDisplay: formatJornadaLabels(filtered), necaxaVals, rankPerJ }
   }, [showJornada, rows, labels, activeTorneos, metric])
 
   if (!metrics.length) return <div style={{ color: 'var(--gray)', fontSize: 12, padding: 24 }}>Sin datos disponibles</div>
@@ -176,7 +184,7 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
               <div style={{ height: 220 }}>
                 <Bar
                   data={{
-                    labels: jornadaData.jornadas,
+                    labels: jornadaData.jornadasDisplay,
                     datasets: [{ data: jornadaData.necaxaVals, backgroundColor: RED, borderRadius: 3, _barLabels: true }],
                   }}
                   options={{
@@ -193,7 +201,7 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
               <div style={{ height: 220 }}>
                 <Bar
                   data={{
-                    labels: jornadaData.jornadas,
+                    labels: jornadaData.jornadasDisplay,
                     datasets: [{
                       type: 'line',
                       data: jornadaData.rankPerJ,
@@ -240,7 +248,7 @@ function ScatterChart({ rows, labels, activeTorneos, title, sourceKey }) {
   const points = useMemo(() => {
     const teams = {}
     rows.forEach(r => {
-      if (labels?.length && !labels.includes(r.jornada)) return
+      if (labels?.length && !labels.includes(jKey(r.torneo, r.jornada))) return
       if (activeTorneos?.length && !activeTorneos.includes(r.torneo)) return
       const eq = r.equipo || r.Equipo || ''
       if (!eq) return

@@ -6,6 +6,36 @@ function num(v) {
   return isNaN(n) ? 0 : +n.toFixed(2)
 }
 
+// ── Identificador único de jornada (torneo + jornada) ──────────────────────
+// Antes, las jornadas se identificaban solo por su etiqueta ("J1", "J2"...),
+// así que si dos torneos comparten etiqueta, todo lo que agrupaba "por
+// jornada" mezclaba o perdía datos de uno de los dos. jKey combina ambos en
+// un identificador único; jLabel/formatJornadaLabels lo vuelven a mostrar de
+// forma legible (solo "J1" si hay un único torneo en juego, o "Torneo · J1"
+// si hay varios mezclados para no confundirlos).
+const JKEY_SEP = '\u241F'
+
+export function jKey(torneo, jornada) {
+  return `${torneo || ''}${JKEY_SEP}${jornada}`
+}
+
+export function jParts(key) {
+  const i = String(key).indexOf(JKEY_SEP)
+  if (i === -1) return { torneo: '', jornada: key }
+  return { torneo: key.slice(0, i), jornada: key.slice(i + 1) }
+}
+
+export function jLabel(key, showTorneo) {
+  const { torneo, jornada } = jParts(key)
+  return showTorneo && torneo ? `${torneo} · ${jornada}` : jornada
+}
+
+export function formatJornadaLabels(keys) {
+  const torneosSet = new Set((keys || []).map(k => jParts(k).torneo))
+  const multi = torneosSet.size > 1
+  return (keys || []).map(k => jLabel(k, multi))
+}
+
 const ROLE_ORDER = [
   'Portero',
   'Stopper Izquierdo Ofensivo',
@@ -23,10 +53,10 @@ const ROLE_ORDER = [
 
 export function processColectivo(rows, jornadas, rivalRows) {
   const byJ = {}
-  jornadas.forEach(j => { byJ[j] = rows.find(r => r.jornada === j) || {} })
+  jornadas.forEach(j => { byJ[j] = rows.find(r => jKey(r.torneo, r.jornada) === j) || {} })
 
   const rivalByJ = {}
-  jornadas.forEach(j => { rivalByJ[j] = (rivalRows || []).find(r => r.jornada === j) || {} })
+  jornadas.forEach(j => { rivalByJ[j] = (rivalRows || []).find(r => jKey(r.torneo, r.jornada) === j) || {} })
 
   const pick = f => jornadas.map(j => num(byJ[j]?.[f]))
   const pickRival = f => jornadas.map(j => num(rivalByJ[j]?.[f]))
@@ -331,7 +361,7 @@ export function processJugadores(rows, jornadas) {
       ini:  nombre.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase(),
       jornadaData: {},
     }
-    jugMap[nombre].jornadaData[r.jornada] = r
+    jugMap[nombre].jornadaData[jKey(r.torneo, r.jornada)] = r
   })
 
   const players = Object.values(jugMap).map(p => {
@@ -377,10 +407,12 @@ export default function useSheetData() {
 
       const colRows   = (raw.colectivo || []).filter(r => r.equipo === 'Necaxa' || r['Equipo'] === 'Necaxa')
       const rivalRows = (raw.colectivo || []).filter(r => r.equipo !== 'Necaxa' && r['Equipo'] !== 'Necaxa')
-      const jorSet    = [...new Set(colRows.map(r => r.jornada).filter(Boolean))]
-      const jornadas  = jorSet.sort((a, b) =>
-        parseInt(String(a).replace(/\D/g,'')) - parseInt(String(b).replace(/\D/g,''))
-      )
+      const jorSet    = [...new Set(colRows.map(r => jKey(r.torneo, r.jornada)).filter(Boolean))]
+      const jornadas  = jorSet.sort((a, b) => {
+        const pa = jParts(a), pb = jParts(b)
+        if (pa.torneo !== pb.torneo) return pa.torneo.localeCompare(pb.torneo)
+        return parseInt(String(pa.jornada).replace(/\D/g,'')) - parseInt(String(pb.jornada).replace(/\D/g,''))
+      })
       const D  = processColectivo(colRows, jornadas, rivalRows)
       const PL = processJugadores(raw.jugadores || [], jornadas)
       setState({ status: 'ok', jornadas, D, PL, raw })

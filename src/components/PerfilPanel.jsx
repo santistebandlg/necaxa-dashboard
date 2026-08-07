@@ -4,6 +4,7 @@ import { StatBarChart } from './Charts'
 import { RED, GOLD, WHT, GRN, GRID } from '../utils/chartUtils'
 import PitchMap from './PitchMap'
 import { getPlayerPhoto } from '../utils/playerPhotos'
+import { jKey, formatJornadaLabels } from '../hooks/useSheetData'
 
 // ── Helpers ──────────────────────────────────────────────────
 function fmt(v) {
@@ -29,7 +30,7 @@ const EXCLUDED = ['desconocido', 'fj', 'f', 'fl', '']
 function filterRaw(events, labels, jugador, activeTorneos) {
   if (!events) return []
   return events.filter(e => {
-    if (labels?.length && !labels.includes(e.jornada)) return false
+    if (labels?.length && !labels.includes(jKey(e.torneo, e.jornada))) return false
     if (activeTorneos?.length && !activeTorneos.includes(e.torneo)) return false
     const n = (e.jugador || '').trim().toLowerCase()
     if (EXCLUDED.includes(n)) return false
@@ -287,7 +288,7 @@ export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornada
             {filteredStats.map((st, idx) => (
               <div key={idx} className="scc">
                 <div className="sctitle">{st.lbl}</div>
-                <StatBarChart labels={labels} data={st.filteredData} color={colorMap[st.c] || RED} height={110} />
+                <StatBarChart labels={formatJornadaLabels(labels)} data={st.filteredData} color={colorMap[st.c] || RED} height={110} />
               </div>
             ))}
           </div>
