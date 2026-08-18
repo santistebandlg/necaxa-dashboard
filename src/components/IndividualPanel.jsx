@@ -3,6 +3,7 @@ import { StatBarChart } from './Charts'
 import { RED, GOLD, WHT } from '../utils/chartUtils'
 import { getPlayerPhoto } from '../utils/playerPhotos'
 import { ROLE_LABELS, getStatsByRole, formatJornadaLabels, jLabel } from '../hooks/useSheetData'
+import PlayerPDFExportButton from './PlayerPDFExport'
 
 const ROLE_ORDER = [
   'Portero','Stopper Izquierdo','Libero','Stopper Derecho',
@@ -145,6 +146,14 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
             ↺ Restablecer posición original ({ROLE_LABELS[basePlayer.defaultRole] || basePlayer.pos})
           </button>
         )}
+
+        <div style={{ marginLeft: 'auto' }}>
+          <PlayerPDFExportButton
+            player={player}
+            jornadaLabel={labels?.length ? formatJornadaLabels(labels).join(', ') : jLabel(player.lastJ, true)}
+            statCount={filteredStats.length}
+          />
+        </div>
       </div>
 
       {/* Player header */}
@@ -219,7 +228,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
           gap: 16,
         }}>
           {filteredStats.map((st, idx) => (
-            <div key={idx} className="scc">
+            <div key={idx} id={`pdf-player-chart-${idx}`} className="scc">
               <div className="sctitle">{st.lbl}</div>
               <div className="scsub">
                 Jornadas seleccionadas · Último: <strong style={{ color: 'var(--white)' }}>

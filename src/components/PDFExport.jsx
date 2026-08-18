@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { COVER_IMAGES } from './coverImages'
 
-const W = 1920
-const H = 1080
+export const W = 2560
+export const H = 1440
+export const DW = 1920 // sistema de coordenadas de diseño — todo el código de dibujo
+export const DH = 1080 // usa estas medidas; W/H son solo el tamaño físico de salida
 
-function loadImage(src) {
+export function loadImage(src) {
   return new Promise((res, rej) => {
     const img = new window.Image()
     img.crossOrigin = 'anonymous'
@@ -14,14 +16,14 @@ function loadImage(src) {
   })
 }
 
-async function captureChart(id) {
+export async function captureChart(id) {
   const el = document.getElementById(id)
   if (!el) return null
   try {
     const html2canvas = (await import('html2canvas')).default
     const c = await html2canvas(el, {
       backgroundColor: '#1c1c1c',
-      scale: 3,
+      scale: 4,
       useCORS: true,
       allowTaint: false,
       logging: false,
@@ -34,7 +36,7 @@ async function captureChart(id) {
   }
 }
 
-function roundRect(ctx, x, y, w, h, r = 6) {
+export function roundRect(ctx, x, y, w, h, r = 6) {
   ctx.beginPath()
   ctx.moveTo(x + r, y)
   ctx.lineTo(x + w - r, y)
@@ -66,21 +68,21 @@ async function drawCover(ctx, coverKey, jornadaRange) {
   if (src) {
     try {
       const img = await loadImage(src)
-      const scaleX = W / img.naturalWidth
-      const scaleY = H / img.naturalHeight
+      const scaleX = DW / img.naturalWidth
+      const scaleY = DH / img.naturalHeight
       const scale  = Math.max(scaleX, scaleY)
       const dw = img.naturalWidth  * scale
       const dh = img.naturalHeight * scale
-      const dx = (W - dw) / 2
-      const dy = (H - dh) / 2
+      const dx = (DW - dw) / 2
+      const dy = (DH - dh) / 2
       ctx.drawImage(img, dx, dy, dw, dh)
     } catch (e) {
       ctx.fillStyle = '#1a1a1a'
-      ctx.fillRect(0, 0, W, H)
+      ctx.fillRect(0, 0, DW, DH)
     }
   } else {
     ctx.fillStyle = '#1a1a1a'
-    ctx.fillRect(0, 0, W, H)
+    ctx.fillRect(0, 0, DW, DH)
   }
 
   // Only rendimiento gets the jornada range text
@@ -107,13 +109,13 @@ async function drawContentSlide(ctx, title, jornadaText, chartIds, layout) {
   const CARD_PAD = 10
 
   ctx.fillStyle = '#131313'
-  ctx.fillRect(0, 0, W, H)
+  ctx.fillRect(0, 0, DW, DH)
 
   // Header bar
   ctx.fillStyle = '#0d0d0d'
-  ctx.fillRect(0, 0, W, HEADER_H)
+  ctx.fillRect(0, 0, DW, HEADER_H)
   ctx.fillStyle = '#c81a1a'
-  ctx.fillRect(0, HEADER_H - 3, W, 3)
+  ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
   ctx.textBaseline = 'middle'
 
@@ -132,12 +134,12 @@ async function drawContentSlide(ctx, title, jornadaText, chartIds, layout) {
   ctx.fillStyle = '#444'
   ctx.font = `500 18px "Barlow", sans-serif`
   ctx.textAlign = 'right'
-  ctx.fillText('ÚLTIMOS 5 PARTIDOS', W - PAD, HEADER_H * 0.32)
+  ctx.fillText('ÚLTIMOS 5 PARTIDOS', DW - PAD, HEADER_H * 0.32)
 
   // Right: jornada label
   ctx.fillStyle = '#888'
   ctx.font = `700 22px "Barlow Condensed", "Arial Narrow", sans-serif`
-  ctx.fillText(jornadaText, W - PAD, HEADER_H * 0.72)
+  ctx.fillText(jornadaText, DW - PAD, HEADER_H * 0.72)
 
   // ── Capture charts
   const images = await Promise.all(chartIds.map(id => captureChart(id)))
@@ -159,8 +161,8 @@ async function drawContentSlide(ctx, title, jornadaText, chartIds, layout) {
   }
 
   const areaY = HEADER_H + PAD
-  const areaH = H - HEADER_H - PAD * 2
-  const areaW = W - PAD * 2
+  const areaH = DH - HEADER_H - PAD * 2
+  const areaW = DW - PAD * 2
   const cellW = (areaW - CELL_GAP * (cols - 1)) / cols
   const cellH = (areaH - CELL_GAP * (rows - 1)) / rows
 
@@ -205,7 +207,7 @@ async function drawContentSlide(ctx, title, jornadaText, chartIds, layout) {
 // ── Main PDF generation
 export async function generatePDF(jornadaLabel, onProgress) {
   const { jsPDF } = await import('jspdf')
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [W, H] })
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [W, H], compress: true })
 
   const jornadaRange = buildJornadaRange(jornadaLabel)
   const jornadaText  = jornadaRange  // for content slides header
@@ -243,6 +245,7 @@ export async function generatePDF(jornadaLabel, onProgress) {
     canvas.width  = W
     canvas.height = H
     const ctx = canvas.getContext('2d')
+    ctx.scale(W / DW, H / DH)
 
     if (slide.type === 'cover') {
       await drawCover(ctx, slide.coverKey, jornadaRange)
@@ -250,9 +253,9 @@ export async function generatePDF(jornadaLabel, onProgress) {
       await drawContentSlide(ctx, slide.title, jornadaText, slide.charts, slide.layout)
     }
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.95)
+    const imgData = canvas.toDataURL('image/png')
     if (si > 0) doc.addPage([W, H], 'landscape')
-    doc.addImage(imgData, 'JPEG', 0, 0, W, H)
+    doc.addImage(imgData, 'PNG', 0, 0, W, H)
   }
 
   onProgress?.(100, 'Guardando...')
