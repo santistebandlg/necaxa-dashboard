@@ -319,6 +319,7 @@ export function getStatsByRole(name, jornadas, jornadaData, roleOverride) {
     row('Recuperaciones / campo rival',  'recuperaciones',  'recuperacionesAdv',null,            'recuperaciones',  'r'),
     row('Duelos def. / ganados',         'duelosDef',       'duelosDefGan',    'duelosDefGanPct','duelosDef',       'r'),
     row('Interceptaciones',              'interceptaciones', null,              null,             'interceptaciones','w'),
+    row('Balones perdidos',              'balonesPerdidos',  null,              null,             'balonesPerdidos', 'r'),
     row('Pases adelante / precisos',     'pasesAdelante',   'pasesAdelanteLog','pasesAdelantePct','pasesAdelante',  'r'),
     row('Pases últ. tercio / precisos',  'pasesUT',         'pasesUTLog',      'pasesUTPct',     'pasesUT',         'r'),
     row('Duelos ofe. / ganados',         'duelosOfe',       'duelosOfeGan',    'duelosOfeGanPct','duelosOfe',       'r'),
