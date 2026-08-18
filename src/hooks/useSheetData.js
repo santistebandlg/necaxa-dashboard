@@ -41,8 +41,30 @@ export function formatJornadaLabels(keys) {
 // por nombre de torneo. Si no se puede leer o parsear, regresa null.
 function rowDate(r) {
   const raw = r?.fecha ?? r?.Fecha ?? r?.date ?? r?.Date
-  if (!raw) return null
-  const d = new Date(raw)
+  if (raw == null || raw === '') return null
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw.getTime()
+  if (typeof raw === 'number') {
+    // Serial de fecha de Google Sheets (días desde 1899-12-30)
+    const d = new Date(Date.UTC(1899, 11, 30) + raw * 86400000)
+    return isNaN(d.getTime()) ? null : d.getTime()
+  }
+  const s = String(raw).trim()
+  // ISO: 2026-08-14 (con o sin hora)
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (m) {
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]))
+    return isNaN(d.getTime()) ? null : d.getTime()
+  }
+  // DD/MM/YYYY o DD-MM-YYYY (formato día/mes/año usado en el Sheet) —
+  // se interpreta explícito día-primero para no depender de que JS lo
+  // adivine como mes/día/año y descarte fechas como "14/08/2026".
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+  if (m) {
+    const dd = +m[1], mm = +m[2], yyyy = +m[3]
+    const d = new Date(Date.UTC(yyyy, mm - 1, dd))
+    return isNaN(d.getTime()) ? null : d.getTime()
+  }
+  const d = new Date(s)
   return isNaN(d.getTime()) ? null : d.getTime()
 }
 
