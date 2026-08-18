@@ -36,6 +36,37 @@ export function formatJornadaLabels(keys) {
   return (keys || []).map(k => jLabel(k, multi))
 }
 
+// Lee la columna Fecha/Date de una fila (Colectivo: "Fecha"/C, Jugadores: "Date"/F)
+// y la convierte a timestamp para poder ordenar cronológicamente en vez de
+// por nombre de torneo. Si no se puede leer o parsear, regresa null.
+function rowDate(r) {
+  const raw = r?.fecha ?? r?.Fecha ?? r?.date ?? r?.Date
+  if (!raw) return null
+  const d = new Date(raw)
+  return isNaN(d.getTime()) ? null : d.getTime()
+}
+
+// Ordena claves de jornada por fecha real (usando la primera fecha encontrada
+// por clave); si a alguna le falta fecha, cae de vuelta al orden por
+// torneo+número de jornada para no dejarla fuera del eje.
+export function sortJornadaKeysByDate(keys, rows) {
+  const dateByKey = {}
+  ;(rows || []).forEach(r => {
+    const k = jKey(r.torneo, r.jornada)
+    const d = rowDate(r)
+    if (d != null && (dateByKey[k] == null || d < dateByKey[k])) dateByKey[k] = d
+  })
+  return [...keys].sort((a, b) => {
+    const da = dateByKey[a], db = dateByKey[b]
+    if (da != null && db != null) return da - db
+    if (da != null) return -1
+    if (db != null) return 1
+    const pa = jParts(a), pb = jParts(b)
+    if (pa.torneo !== pb.torneo) return pa.torneo.localeCompare(pb.torneo)
+    return parseInt(String(pa.jornada).replace(/\D/g,'')) - parseInt(String(pb.jornada).replace(/\D/g,''))
+  })
+}
+
 const ROLE_ORDER = [
   'Portero',
   'Stopper Izquierdo Ofensivo',
@@ -408,11 +439,7 @@ export default function useSheetData() {
       const colRows   = (raw.colectivo || []).filter(r => r.equipo === 'Necaxa' || r['Equipo'] === 'Necaxa')
       const rivalRows = (raw.colectivo || []).filter(r => r.equipo !== 'Necaxa' && r['Equipo'] !== 'Necaxa')
       const jorSet    = [...new Set(colRows.map(r => jKey(r.torneo, r.jornada)).filter(Boolean))]
-      const jornadas  = jorSet.sort((a, b) => {
-        const pa = jParts(a), pb = jParts(b)
-        if (pa.torneo !== pb.torneo) return pa.torneo.localeCompare(pb.torneo)
-        return parseInt(String(pa.jornada).replace(/\D/g,'')) - parseInt(String(pb.jornada).replace(/\D/g,''))
-      })
+      const jornadas  = sortJornadaKeysByDate(jorSet, colRows)
       const D  = processColectivo(colRows, jornadas, rivalRows)
       const PL = processJugadores(raw.jugadores || [], jornadas)
       setState({ status: 'ok', jornadas, D, PL, raw })

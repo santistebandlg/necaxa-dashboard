@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Bar, Scatter } from 'react-chartjs-2'
 import { RED, GOLD, WHT, GRID } from '../utils/chartUtils'
-import { jKey, formatJornadaLabels } from '../hooks/useSheetData'
+import { jKey, formatJornadaLabels, sortJornadaKeysByDate } from '../hooks/useSheetData'
 
 const NECAXA = 'Necaxa'
 
@@ -56,16 +56,11 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
   // ── Vista por jornada ──────────────────────────────────────
   const jornadaData = useMemo(() => {
     if (!showJornada) return null
-    const jornadas = [...new Set(
-      rows
-        .filter(r => (!activeTorneos?.length || activeTorneos.includes(r.torneo)))
-        .map(r => jKey(r.torneo, r.jornada))
-        .filter(Boolean)
-    )].sort((a, b) => {
-      const [ta, ja] = a.split('\u241F'), [tb, jb] = b.split('\u241F')
-      if (ta !== tb) return ta.localeCompare(tb)
-      return parseInt(String(ja).replace(/\D/g,'')) - parseInt(String(jb).replace(/\D/g,''))
-    })
+    const filteredRows = rows.filter(r => (!activeTorneos?.length || activeTorneos.includes(r.torneo)))
+    const jornadas = sortJornadaKeysByDate(
+      [...new Set(filteredRows.map(r => jKey(r.torneo, r.jornada)).filter(Boolean))],
+      filteredRows
+    )
     const filtered = labels?.length ? jornadas.filter(j => labels.includes(j)) : jornadas
     const allTeams = [...new Set(rows.map(r => r.equipo || r.Equipo).filter(Boolean))]
     const necaxaVals = filtered.map(j => {

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import useSheetData, { processJugadores, processColectivo, jKey, jParts, formatJornadaLabels } from './hooks/useSheetData'
+import useSheetData, { processJugadores, processColectivo, jKey, jParts, formatJornadaLabels, sortJornadaKeysByDate } from './hooks/useSheetData'
 import { Header, Sidebar, JornadaFilter, TorneoFilter, Loading, ErrorState } from './components/UI'
 import ColectivoPanel from './components/ColectivoPanel'
 import IndividualPanel from './components/IndividualPanel'
@@ -78,11 +78,7 @@ function Dashboard() {
       ? raw.fisico.filter(r => activeTorneos.includes(r.torneo))
       : raw.fisico
     const set = [...new Set(filtered.map(r => jKey(r.torneo, r.jornada)).filter(Boolean))]
-    return set.sort((a, b) => {
-      const pa = jParts(a), pb = jParts(b)
-      if (pa.torneo !== pb.torneo) return pa.torneo.localeCompare(pb.torneo)
-      return parseInt(String(pa.jornada).replace(/\D/g,'')) - parseInt(String(pb.jornada).replace(/\D/g,''))
-    })
+    return sortJornadaKeysByDate(set, filtered)
   }, [raw, activeTorneos])
 
   // Active jornadas — shared, mapped against current panel's jornada list
