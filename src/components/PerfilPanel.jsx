@@ -294,72 +294,7 @@ export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornada
           </div>
         </div>
 
-        {/* ── SECCIÓN 2: Recuperaciones ── */}
-        {recEvents.length > 0 && <>
-          <SecTitle>Recuperaciones — {recEvents.length} total</SecTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
-            <StatCard label="Total" value={recEvents.length} />
-            <StatCard label="Campo rival" value={recEvents.filter(e => e.campoProRiv === 'Campo rival').length} color={GOLD} />
-            <StatCard label="Campo propio" value={recEvents.filter(e => e.campoProRiv !== 'Campo rival').length} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por tipo de acción</div>
-              <AccionBar events={recEvents} color={RED} />
-            </div>
-            <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por zona (1/4 de campo)</div>
-              <AccionBar events={recEvents.map(e => ({ ...e, accion: e.cuartoCanpo || 'Sin zona' }))} color={GOLD} />
-            </div>
-          </div>
-        </>}
-
-        {/* ── SECCIÓN 3: Balones perdidos ── */}
-        {balEvents.length > 0 && <>
-          <SecTitle>Balones Perdidos — {balEvents.length} total</SecTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
-            <StatCard label="Total" value={balEvents.length} color={RED} />
-            <StatCard label="Campo propio" value={balEvents.filter(e => e.campoProRiv !== 'Campo rival').length} />
-            <StatCard label="Campo rival" value={balEvents.filter(e => e.campoProRiv === 'Campo rival').length} color={GOLD} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por tipo de acción</div>
-              <AccionBar events={balEvents} color={RED} />
-            </div>
-            <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por zona (1/4 de campo)</div>
-              <AccionBar events={balEvents.map(e => ({ ...e, accion: e.cuartoCampo || 'Sin zona' }))} color={WHT} />
-            </div>
-          </div>
-        </>}
-
-        {/* ── SECCIÓN 4: Duelos ── */}
-        {dueEvents.length > 0 && <>
-          <SecTitle>Duelos — {dueEvents.length} total</SecTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
-            <StatCard label="Total" value={dueEvents.length} />
-            <StatCard label="Ganados" value={dueEvents.filter(e => e.resultado === 'Ganado').length} color={GRN} />
-            <StatCard label="Perdidos" value={dueEvents.filter(e => e.resultado === 'Perdido').length} color={RED} />
-            <StatCard
-              label="Efectividad"
-              value={dueEvents.length ? Math.round(dueEvents.filter(e => e.resultado === 'Ganado').length / dueEvents.length * 100) + '%' : '—'}
-              color={GOLD}
-            />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por tipo de duelo</div>
-              <AccionBar events={dueEvents} color={RED} />
-            </div>
-            <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por zona (1/4 de campo)</div>
-              <AccionBar events={dueEvents.map(e => ({ ...e, accion: e.cuartoCampo || 'Sin zona' }))} color={WHT} />
-            </div>
-          </div>
-        </>}
-
-        {/* ── SECCIÓN 5: Mapa de eventos ── */}
+        {/* ── SECCIÓN 2: Mapa de eventos (mapa + leyenda + stats + desgloses, por módulo) ── */}
         {(recEvents.length > 0 || balEvents.length > 0 || dueEvents.length > 0) && <>
           <SecTitle>Mapa de Eventos</SecTitle>
           <div style={{ display: 'flex', gap: 6, marginBottom: 16, alignItems: 'center' }}>
@@ -404,31 +339,88 @@ export default function PerfilPanel({ PL, raw, labels, activeTorneos, allJornada
                 />
               )}
             </div>
-            <div style={{ paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 11, color: 'var(--gray)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Leyenda</div>
+            <div style={{ paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minWidth: 280 }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--gray)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Leyenda</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {mapaModulo === 'recuperaciones' && <>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, flexShrink: 0, display: 'inline-block' }} />Campo propio
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: GOLD, flexShrink: 0, display: 'inline-block' }} />Campo rival
+                    </span>
+                  </>}
+                  {mapaModulo === 'balones' && <>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, flexShrink: 0, display: 'inline-block' }} />Campo propio
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: GOLD, flexShrink: 0, display: 'inline-block' }} />Campo rival
+                    </span>
+                  </>}
+                  {mapaModulo === 'duelos' && <>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: GRN, flexShrink: 0, display: 'inline-block' }} />Ganado
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
+                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, flexShrink: 0, display: 'inline-block' }} />Perdido
+                    </span>
+                  </>}
+                </div>
+              </div>
+
               {mapaModulo === 'recuperaciones' && <>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
-                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, flexShrink: 0, display: 'inline-block' }} />Campo propio
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
-                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: GOLD, flexShrink: 0, display: 'inline-block' }} />Campo rival
-                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                  <StatCard label="Total" value={recEvents.length} />
+                  <StatCard label="Campo rival" value={recEvents.filter(e => e.campoProRiv === 'Campo rival').length} color={GOLD} />
+                  <StatCard label="Campo propio" value={recEvents.filter(e => e.campoProRiv !== 'Campo rival').length} />
+                </div>
+                <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
+                  <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por tipo de acción</div>
+                  <AccionBar events={recEvents} color={RED} />
+                </div>
+                <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
+                  <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por zona (1/4 de campo)</div>
+                  <AccionBar events={recEvents.map(e => ({ ...e, accion: e.cuartoCanpo || 'Sin zona' }))} color={GOLD} />
+                </div>
               </>}
+
               {mapaModulo === 'balones' && <>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
-                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, flexShrink: 0, display: 'inline-block' }} />Campo propio
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
-                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: GOLD, flexShrink: 0, display: 'inline-block' }} />Campo rival
-                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                  <StatCard label="Total" value={balEvents.length} color={RED} />
+                  <StatCard label="Campo propio" value={balEvents.filter(e => e.campoProRiv !== 'Campo rival').length} />
+                  <StatCard label="Campo rival" value={balEvents.filter(e => e.campoProRiv === 'Campo rival').length} color={GOLD} />
+                </div>
+                <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
+                  <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por tipo de acción</div>
+                  <AccionBar events={balEvents} color={RED} />
+                </div>
+                <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
+                  <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por zona (1/4 de campo)</div>
+                  <AccionBar events={balEvents.map(e => ({ ...e, accion: e.cuartoCampo || 'Sin zona' }))} color={WHT} />
+                </div>
               </>}
+
               {mapaModulo === 'duelos' && <>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
-                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: GRN, flexShrink: 0, display: 'inline-block' }} />Ganado
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray3)' }}>
-                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: RED, flexShrink: 0, display: 'inline-block' }} />Perdido
-                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                  <StatCard label="Total" value={dueEvents.length} />
+                  <StatCard label="Ganados" value={dueEvents.filter(e => e.resultado === 'Ganado').length} color={GRN} />
+                  <StatCard label="Perdidos" value={dueEvents.filter(e => e.resultado === 'Perdido').length} color={RED} />
+                  <StatCard
+                    label="Efectividad"
+                    value={dueEvents.length ? Math.round(dueEvents.filter(e => e.resultado === 'Ganado').length / dueEvents.length * 100) + '%' : '—'}
+                    color={GOLD}
+                  />
+                </div>
+                <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
+                  <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por tipo de duelo</div>
+                  <AccionBar events={dueEvents} color={RED} />
+                </div>
+                <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 16 }}>
+                  <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Por zona (1/4 de campo)</div>
+                  <AccionBar events={dueEvents.map(e => ({ ...e, accion: e.cuartoCampo || 'Sin zona' }))} color={WHT} />
+                </div>
               </>}
             </div>
           </div>
