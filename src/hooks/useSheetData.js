@@ -231,12 +231,35 @@ export function getStatsByRole(name, jornadas, jornadaData, roleOverride) {
       if (logrado != null && total) pct = logrado / total
       else if (lastR[pctF] != null) pct = num(lastR[pctF]) // fallback si no hay total/logrado para calcularlo
     }
+    const chartData = jornadas.map(j => num(jornadaData[j]?.[chartF] || 0))
+    // Serie histórica del "logrado" (segunda variable) y de la efectividad,
+    // para poder graficar como barra roja (total) + barra blanca (logrado)
+    // + línea amarilla (%) cuando el stat tiene esas dos variables.
+    const chartData2 = logradoF
+      ? jornadas.map(j => num(jornadaData[j]?.[logradoF] || 0))
+      : null
+    const pctChartData = pctF
+      ? jornadas.map(j => {
+          const r = jornadaData[j]
+          if (!r) return null
+          const t = num(r[totalF] || 0)
+          const l = logradoF ? num(r[logradoF] || 0) : null
+          if (l != null && t) return (l / t) * 100
+          if (r[pctF] != null) {
+            const v = num(r[pctF])
+            return v > 0 && v <= 1 ? v * 100 : v
+          }
+          return null
+        })
+      : null
     return {
       lbl,
       total,
       logrado,
       pct,
-      chartData: jornadas.map(j => num(jornadaData[j]?.[chartF] || 0)),
+      chartData,
+      chartData2,
+      pctChartData,
       c: c || 'r',
     }
   }

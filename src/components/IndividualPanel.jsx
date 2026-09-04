@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { StatBarChart } from './Charts'
+import { StatBarChart, StatComboChart } from './Charts'
 import { RED, GOLD, WHT } from '../utils/chartUtils'
 import { getPlayerPhoto } from '../utils/playerPhotos'
 import { ROLE_LABELS, getStatsByRole, formatJornadaLabels, jLabel } from '../hooks/useSheetData'
@@ -93,11 +93,16 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
 
   // Filter chart data to selected labels
   const filteredStats = player.stats.map(st => {
-    const filteredData = labels.map(lbl => {
+    const pick = (arr, fallback) => labels.map(lbl => {
       const idx = (allJornadas || []).indexOf(lbl)
-      return idx >= 0 ? (st.chartData[idx] ?? 0) : 0
+      if (idx < 0 || !arr) return fallback
+      const v = arr[idx]
+      return v === undefined ? fallback : v
     })
-    return { ...st, filteredData }
+    const filteredData = pick(st.chartData, 0)
+    const filteredData2 = st.chartData2 ? pick(st.chartData2, 0) : null
+    const filteredPct = st.pctChartData ? pick(st.pctChartData, null) : null
+    return { ...st, filteredData, filteredData2, filteredPct }
   })
 
   return (
@@ -235,12 +240,22 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
                   {st.filteredData[st.filteredData.length - 1] ?? '—'}
                 </strong>
               </div>
-              <StatBarChart
-                labels={formatJornadaLabels(labels)}
-                data={st.filteredData}
-                color={colorMap[st.c] || RED}
-                height={130}
-              />
+              {st.filteredData2 ? (
+                <StatComboChart
+                  labels={formatJornadaLabels(labels)}
+                  total={st.filteredData}
+                  logrado={st.filteredData2}
+                  pct={st.filteredPct}
+                  height={130}
+                />
+              ) : (
+                <StatBarChart
+                  labels={formatJornadaLabels(labels)}
+                  data={st.filteredData}
+                  color={colorMap[st.c] || RED}
+                  height={130}
+                />
+              )}
             </div>
           ))}
         </div>

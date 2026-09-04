@@ -5,6 +5,28 @@ import {
   barLineDatasets, stackedDatasets, baseOptions,
 } from '../utils/chartUtils'
 
+// ── Stat de dos variables: barra roja (total) + barra blanca (logrado)
+// + línea amarilla de efectividad (solo si hay datos de % disponibles)
+export function StatComboChart({ labels, total, logrado, pct, height = 130 }) {
+  const hasPct = Array.isArray(pct) && pct.some(v => v !== null && v !== undefined)
+  const data = barLineDatasets(labels, {
+    r: total,
+    w: logrado,
+    e: hasPct ? pct : total.map(() => null),
+  })
+  if (!hasPct) {
+    // Sin datos de efectividad: solo las dos barras, sin línea ni eje %
+    data.datasets = data.datasets.filter(ds => ds.type !== 'line')
+  }
+  return (
+    <Bar
+      height={height}
+      data={data}
+      options={baseOptions(hasPct)}
+    />
+  )
+}
+
 // ── Generic bar+line (red bars, white bars, gold line)
 export function BarLineChart({ labels, d, height = 150, maxY }) {
   return (
