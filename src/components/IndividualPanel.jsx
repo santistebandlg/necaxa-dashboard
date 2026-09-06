@@ -227,11 +227,12 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
         </div>
 
         {/* ── GRÁFICAS acumulativas ── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-        }}>
+        <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, minmax(280px, 1fr))',
+            gap: 16,
+          }}>
           {filteredStats.map((st, idx) => (
             <div key={idx} id={`pdf-player-chart-${idx}`} className="scc">
               <div className="sctitle">{st.lbl}</div>
@@ -258,6 +259,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
               )}
             </div>
           ))}
+          </div>
         </div>
 
       </div>
