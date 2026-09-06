@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import useSheetData, { processJugadores, processColectivo, jKey, jParts, formatJornadaLabels, sortJornadaKeysByDate } from './hooks/useSheetData'
+import useSheetData, { processJugadores, processColectivo, jKey, jParts, formatJornadaLabels, sortJornadaKeysByDate, abbreviateJornada } from './hooks/useSheetData'
 import { Header, Sidebar, JornadaFilter, TorneoFilter, Loading, ErrorState } from './components/UI'
 import ColectivoPanel from './components/ColectivoPanel'
 import IndividualPanel from './components/IndividualPanel'
@@ -123,7 +123,7 @@ function Dashboard() {
       ? '' : effectiveTorneos.length === 1 ? `${effectiveTorneos[0]} · ` : `${effectiveTorneos.length} torneos · `
     const keys = activeJ.length ? activeJ.map(i => jornadasFiltered[i]).filter(Boolean) : jornadasFiltered
     if (!keys.length) return 'Sin datos'
-    const labels = keys.map(k => jParts(k).jornada)
+    const labels = keys.map(k => abbreviateJornada(jParts(k).jornada))
     if (labels.length === 1) return `${torneoLabel}${labels[0]}`
     return `${torneoLabel}${labels[0]}–${labels[labels.length - 1]}`
   }, [activeJ, jornadasFiltered, effectiveTorneos, torneos])

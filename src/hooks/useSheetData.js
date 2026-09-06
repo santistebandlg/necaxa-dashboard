@@ -25,9 +25,14 @@ export function jParts(key) {
   return { torneo: key.slice(0, i), jornada: key.slice(i + 1) }
 }
 
+export function abbreviateJornada(jornada) {
+  return String(jornada).replace(/^Jornada\s*(\d+)/i, 'J$1')
+}
+
 export function jLabel(key, showTorneo) {
   const { torneo, jornada } = jParts(key)
-  return showTorneo && torneo ? `${torneo} · ${jornada}` : jornada
+  const j = abbreviateJornada(jornada)
+  return showTorneo && torneo ? `${torneo} · ${j}` : j
 }
 
 export function formatJornadaLabels(keys) {
