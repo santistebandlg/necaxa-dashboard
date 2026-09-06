@@ -3,6 +3,7 @@ import useSheetData, { processJugadores, processColectivo, jKey, jParts, formatJ
 import { Header, Sidebar, JornadaFilter, TorneoFilter, Loading, ErrorState } from './components/UI'
 import ColectivoPanel from './components/ColectivoPanel'
 import IndividualPanel from './components/IndividualPanel'
+import ComparativaPanel from './components/ComparativaPanel'
 import { RecuperacionesPanel, BalonesPanel, DuelosPanel, FisicoPanel } from './components/AnalysisPanels'
 import PerfilPanel from './components/PerfilPanel'
 import RankingsPanel from './components/RankingsPanel'
@@ -145,6 +146,7 @@ function Dashboard() {
   const panels = {
     colectivo:      <ColectivoPanel D={filteredD(DFiltered)} labels={activeLabels} PL={PL} jornadaLabel={badge} />,
     individual:     <IndividualPanel PL={PLFiltered} labels={activeLabels} allJornadas={jornadasFiltered} />,
+    comparativa:    <ComparativaPanel PL={PL} jornadas={jornadas} torneos={torneos} />,
     perfil:         <PerfilPanel PL={PL} raw={raw} labels={activeLabels} activeTorneos={effectiveTorneos} allJornadas={jornadasFiltered} />,
     recuperaciones: <RecuperacionesPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,
     balones:        <BalonesPanel labels={activeLabels} PL={PL} raw={raw} activeTorneos={effectiveTorneos} />,
@@ -164,25 +166,27 @@ function Dashboard() {
             <div>
               <div className="ptitle">{{
                 colectivo: 'Informe Colectivo', individual: 'Informe Individual',
-                perfil: 'Perfil del Jugador',
+                comparativa: 'Comparativa', perfil: 'Perfil del Jugador',
                 recuperaciones: 'Recuperaciones', balones: 'Balones Perdidos',
                 duelos: 'Duelos', fisico: 'Físico', rankings: 'Rankings Liga MX', rankjugadores: 'Ranking Jugadores'
               }[current]}</div>
               <div className="psub">Rendimiento · Google Sheets en vivo</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              {torneos.length > 0 && (
+              {current !== 'comparativa' && torneos.length > 0 && (
                 <TorneoFilter
                   torneos={torneos}
                   active={activeTorneos.length ? activeTorneos : torneos}
                   onChange={handleTorneoChange}
                 />
               )}
-              <JornadaFilter
-                jornadas={formatJornadaLabels(currentJornadas)}
-                active={effectiveJ}
-                onChange={setActiveJ}
-              />
+              {current !== 'comparativa' && (
+                <JornadaFilter
+                  jornadas={formatJornadaLabels(currentJornadas)}
+                  active={effectiveJ}
+                  onChange={setActiveJ}
+                />
+              )}
             </div>
           </div>
           {panels[current]}
