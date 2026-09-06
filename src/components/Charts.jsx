@@ -172,7 +172,7 @@ export function StatBarChart({ labels, data, color = RED, height = 140 }) {
         responsive: true, maintainAspectRatio: true,
         plugins: { legend: { display: false }, tooltip: { backgroundColor: '#222', borderColor: '#333', borderWidth: 1 } },
         scales: {
-          x: { grid: GRID, ticks: { color: '#666' } },
+          x: { grid: GRID, ticks: { color: '#666', maxRotation: 45, minRotation: 45, autoSkip: true, font: { size: 10 } } },
           y: { grid: GRID, beginAtZero: true, ticks: { color: '#666' } },
         },
       }}

@@ -229,7 +229,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
         {/* ── GRÁFICAS acumulativas ── */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+          gridTemplateColumns: 'repeat(3, 1fr)',
           gap: 16,
         }}>
           {filteredStats.map((st, idx) => (
@@ -246,14 +246,14 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
                   total={st.filteredData}
                   logrado={st.filteredData2}
                   pct={st.filteredPct}
-                  height={130}
+                  height={175}
                 />
               ) : (
                 <StatBarChart
                   labels={formatJornadaLabels(labels)}
                   data={st.filteredData}
                   color={colorMap[st.c] || RED}
-                  height={130}
+                  height={175}
                 />
               )}
             </div>

@@ -126,7 +126,7 @@ export const baseOptions = (y2 = false, maxY) => ({
   maintainAspectRatio: true,
   plugins: { legend: { display: false } },
   scales: {
-    x: { grid: GRID },
+    x: { grid: GRID, ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, font: { size: 10 } } },
     y: { grid: GRID, ...(maxY ? { max: maxY } : {}) },
     ...(y2 ? {
       y2: {
