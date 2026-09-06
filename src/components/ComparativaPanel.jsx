@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { StatBarChart, StatComboChart } from './Charts'
 import { RED, GOLD, WHT } from '../utils/chartUtils'
 import { getPlayerPhoto } from '../utils/playerPhotos'
 import { ROLE_LABELS, getStatsByRole, formatJornadaLabels, jLabel, jParts } from '../hooks/useSheetData'
 import { TorneoFilter, JornadaFilter } from './UI'
+import ComparativaPDFExportButton from './ComparativaPDFExport'
 
 const ROLE_DISPLAY_ORDER = [
   'Portero','Stopper Izquierdo','Libero','Stopper Derecho',
@@ -53,7 +54,7 @@ function PlayerAvatar({ name, ini, size = 60 }) {
 }
 
 // ── Una mitad de la comparativa: jugador + posición + torneo + jornadas propios ──
-function ComparativaSide({ side, PL, jornadas, torneos, roleGroups, defaultId }) {
+function ComparativaSide({ side, PL, jornadas, torneos, roleGroups, defaultId, onSummaryChange }) {
   const [selectedId, setSelectedId] = useState(defaultId)
   const [roleOverride, setRoleOverride] = useState(null)
   const [activeTorneos, setActiveTorneos] = useState([]) // [] = todos
@@ -90,6 +91,11 @@ function ComparativaSide({ side, PL, jornadas, torneos, roleGroups, defaultId })
     setActiveJIdx([])
   }
 
+  const selectedLabels = formatJornadaLabels(selectedKeys)
+  const rangeLabel = selectedLabels.length === 0 ? 'Sin jornadas'
+    : selectedLabels.length === 1 ? selectedLabels[0]
+    : `${selectedLabels[0]} – ${selectedLabels[selectedLabels.length - 1]} (${selectedLabels.length})`
+
   const filteredStats = player.stats.map(st => {
     const pick = (arr, fallback) => selectedKeys.map(lbl => {
       const idx = jornadas.indexOf(lbl)
@@ -100,8 +106,17 @@ function ComparativaSide({ side, PL, jornadas, torneos, roleGroups, defaultId })
     const filteredData = pick(st.chartData, 0)
     const filteredData2 = st.chartData2 ? pick(st.chartData2, 0) : null
     const filteredPct = st.pctChartData ? pick(st.pctChartData, null) : null
-    return { ...st, filteredData, filteredData2, filteredPct }
+    const sum = arr => arr.reduce((a, b) => a + (Number(b) || 0), 0)
+    const sumTotal = sum(filteredData)
+    const sumLogrado = filteredData2 ? sum(filteredData2) : null
+    const sumPct = (filteredData2 && sumTotal) ? sumLogrado / sumTotal : null
+    return { ...st, filteredData, filteredData2, filteredPct, sumTotal, sumLogrado, sumPct }
   })
+
+  useEffect(() => {
+    onSummaryChange?.(side, { player, rangeLabel, statCount: filteredStats.length })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player.name, player.pos, player.ini, player.mins, player.pct, player.lastJ, rangeLabel, filteredStats.length])
 
   return (
     <div>
@@ -177,7 +192,7 @@ function ComparativaSide({ side, PL, jornadas, torneos, roleGroups, defaultId })
           <div style={{
             fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12,
             letterSpacing: 2, textTransform: 'uppercase', color: 'var(--gray3)',
-          }}>Estadísticas — {jLabel(player.lastJ, true)}</div>
+          }}>Estadísticas — {rangeLabel}</div>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -192,9 +207,9 @@ function ComparativaSide({ side, PL, jornadas, torneos, roleGroups, defaultId })
             {filteredStats.map((st, idx) => (
               <tr key={idx} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
                 <td style={{ padding: '6px 12px', fontSize: 11, color: 'var(--gray3)' }}>{st.lbl}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--white)' }}>{fmt(st.total)}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--gray3)' }}>{st.logrado !== null ? fmt(st.logrado) : '—'}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: pctColor(st.pct) }}>{st.pct !== null ? fmtPct(st.pct) : '—'}</td>
+                <td style={{ padding: '6px 8px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--white)' }}>{fmt(st.sumTotal)}</td>
+                <td style={{ padding: '6px 8px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--gray3)' }}>{st.sumLogrado !== null ? fmt(st.sumLogrado) : '—'}</td>
+                <td style={{ padding: '6px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: pctColor(st.sumPct) }}>{st.sumPct !== null ? fmtPct(st.sumPct) : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -205,7 +220,7 @@ function ComparativaSide({ side, PL, jornadas, torneos, roleGroups, defaultId })
       <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
           {filteredStats.map((st, idx) => (
-            <div key={idx} className="scc">
+            <div key={idx} id={`pdf-cmp-${side}-chart-${idx}`} className="scc">
               <div className="sctitle" style={{ fontSize: 12 }}>{st.lbl}</div>
               <div className="scsub" style={{ fontSize: 10 }}>
                 Último: <strong style={{ color: 'var(--white)' }}>{st.filteredData[st.filteredData.length - 1] ?? '—'}</strong>
@@ -235,6 +250,14 @@ function ComparativaSide({ side, PL, jornadas, torneos, roleGroups, defaultId })
 }
 
 export default function ComparativaPanel({ PL, jornadas, torneos }) {
+  const [summaryA, setSummaryA] = useState(null)
+  const [summaryB, setSummaryB] = useState(null)
+
+  const handleSummaryChange = (side, summary) => {
+    if (side === 'A') setSummaryA(summary)
+    else setSummaryB(summary)
+  }
+
   if (!PL || PL.length === 0) return (
     <div className="panel">
       <div className="empty"><div className="big">⚖️</div><p>No hay jugadores disponibles</p></div>
@@ -251,15 +274,23 @@ export default function ComparativaPanel({ PL, jornadas, torneos }) {
 
   return (
     <div className="panel">
+      {summaryA && summaryB && (
+        <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'flex-end' }}>
+          <ComparativaPDFExportButton
+            sideA={summaryA}
+            sideB={summaryB}
+          />
+        </div>
+      )}
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28,
         alignItems: 'start',
       }}>
         <div style={{ borderRight: '1px solid var(--border)', paddingRight: 28 }}>
-          <ComparativaSide side="A" PL={PL} jornadas={jornadas} torneos={torneos} roleGroups={roleGroups} defaultId={PL[0]?.id} />
+          <ComparativaSide side="A" PL={PL} jornadas={jornadas} torneos={torneos} roleGroups={roleGroups} defaultId={PL[0]?.id} onSummaryChange={handleSummaryChange} />
         </div>
         <div>
-          <ComparativaSide side="B" PL={PL} jornadas={jornadas} torneos={torneos} roleGroups={roleGroups} defaultId={PL[1]?.id || PL[0]?.id} />
+          <ComparativaSide side="B" PL={PL} jornadas={jornadas} torneos={torneos} roleGroups={roleGroups} defaultId={PL[1]?.id || PL[0]?.id} onSummaryChange={handleSummaryChange} />
         </div>
       </div>
     </div>
