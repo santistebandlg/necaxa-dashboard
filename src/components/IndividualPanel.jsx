@@ -181,7 +181,7 @@ export default function IndividualPanel({ PL, labels, allJornadas }) {
       <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 24, alignItems: 'start' }}>
 
         {/* ── TABLA última jornada ── */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div id="pdf-player-table" className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{
             padding: '12px 16px',
             background: 'var(--s2)',

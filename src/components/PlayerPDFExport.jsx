@@ -76,6 +76,59 @@ async function drawPlayerCover(ctx, player, jornadaRange) {
 }
 
 // ── Slides de contenido: grid de gráficas capturadas ────────────────────
+// ── Slide 2: tabla de estadísticas ──────────────────────────────────────
+async function drawPlayerTableSlide(ctx, player, pageLabel, tableId) {
+  const PAD = 36, HEADER_H = 100
+
+  ctx.fillStyle = '#131313'
+  ctx.fillRect(0, 0, DW, DH)
+  ctx.fillStyle = '#0d0d0d'
+  ctx.fillRect(0, 0, DW, HEADER_H)
+  ctx.fillStyle = '#c81a1a'
+  ctx.fillRect(0, HEADER_H - 3, DW, 3)
+
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = '#444'
+  ctx.font = `500 20px "Barlow", sans-serif`
+  ctx.textAlign = 'left'
+  ctx.fillText('RENDIMIENTO INDIVIDUAL', PAD, HEADER_H * 0.32)
+
+  ctx.fillStyle = '#f0f0f0'
+  ctx.font = `900 46px "Barlow Condensed", "Arial Narrow", sans-serif`
+  ctx.fillText(player.name.toUpperCase(), PAD, HEADER_H * 0.72)
+
+  ctx.fillStyle = '#888'
+  ctx.font = `700 20px "Barlow Condensed", "Arial Narrow", sans-serif`
+  ctx.textAlign = 'right'
+  ctx.fillText(pageLabel, DW - PAD, HEADER_H * 0.72)
+
+  const areaY = HEADER_H + PAD
+  const areaH = DH - HEADER_H - PAD * 2
+  const areaW = DW - PAD * 2
+
+  const src = await captureChart(tableId)
+  if (src) {
+    const img = await loadImage(src).catch(() => null)
+    if (img) {
+      // Escala la tabla capturada para que quepa completa, centrada, sin deformarla
+      const scale = Math.min(areaW / img.naturalWidth, areaH / img.naturalHeight)
+      const dw = img.naturalWidth * scale
+      const dh = img.naturalHeight * scale
+      const dx = PAD + (areaW - dw) / 2
+      const dy = areaY
+      ctx.fillStyle = '#1c1c1c'
+      roundRect(ctx, dx - 8, dy - 8, dw + 16, dh + 16, 6)
+      ctx.fill()
+      ctx.drawImage(img, dx, dy, dw, dh)
+      return
+    }
+  }
+  ctx.fillStyle = '#444'
+  ctx.font = '500 22px Barlow, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('Sin datos de tabla', DW / 2, areaY + areaH / 2)
+}
+
 async function drawPlayerStatsSlide(ctx, player, pageLabel, chartIds) {
   const PAD = 36, HEADER_H = 100, CELL_GAP = 16, CARD_PAD = 10
 
@@ -169,7 +222,7 @@ export async function generatePlayerPDF(player, jornadaLabel, statCount, onProgr
   const chartIds = Array.from({ length: statCount }, (_, i) => `pdf-player-chart-${i}`)
   const pages = chunk(chartIds, 6) // 3x2 por página
 
-  const totalSlides = 1 + pages.length
+  const totalSlides = 2 + pages.length // portada + tabla + páginas de gráficas
 
   for (let si = 0; si < totalSlides; si++) {
     onProgress?.(Math.round((si / totalSlides) * 100), `Diapositiva ${si + 1} de ${totalSlides}...`)
@@ -182,8 +235,10 @@ export async function generatePlayerPDF(player, jornadaLabel, statCount, onProgr
 
     if (si === 0) {
       await drawPlayerCover(ctx, player, jornadaRange)
+    } else if (si === 1) {
+      await drawPlayerTableSlide(ctx, player, 'Tabla de estadísticas', 'pdf-player-table')
     } else {
-      const pageIdx = si - 1
+      const pageIdx = si - 2
       const pageLabel = pages.length > 1
         ? `Estadísticas ${pageIdx + 1}/${pages.length}`
         : 'Estadísticas'

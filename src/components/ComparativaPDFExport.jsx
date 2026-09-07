@@ -152,6 +152,72 @@ async function drawHalfStatsGrid(ctx, player, chartIds, x0, halfW, areaY, areaH)
   })
 }
 
+async function drawHalfTable(ctx, player, tableId, x0, halfW, areaY, areaH) {
+  const PAD = 24
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = '#f0f0f0'
+  ctx.font = `900 32px "Barlow Condensed", "Arial Narrow", sans-serif`
+  ctx.fillText(player.name.toUpperCase(), x0 + PAD, areaY - 14)
+
+  const areaW = halfW - PAD * 2
+  const gridY = areaY + 10
+  const gridH = areaH - 10
+
+  const src = await captureChart(tableId)
+  const img = src ? await loadImage(src).catch(() => null) : null
+  if (img) {
+    const scale = Math.min(areaW / img.naturalWidth, gridH / img.naturalHeight)
+    const dw = img.naturalWidth * scale
+    const dh = img.naturalHeight * scale
+    const dx = x0 + PAD + (areaW - dw) / 2
+    const dy = gridY
+    ctx.fillStyle = '#1c1c1c'
+    roundRect(ctx, dx - 6, dy - 6, dw + 12, dh + 12, 6)
+    ctx.fill()
+    ctx.drawImage(img, dx, dy, dw, dh)
+  } else {
+    ctx.fillStyle = '#444'
+    ctx.font = '500 18px Barlow, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('Sin datos de tabla', x0 + halfW / 2, gridY + gridH / 2)
+    ctx.textAlign = 'left'
+  }
+}
+
+async function drawComparativaTableSlide(ctx, sideA, sideB, tableIdA, tableIdB) {
+  const HEADER_H = 90
+  ctx.fillStyle = '#131313'
+  ctx.fillRect(0, 0, DW, DH)
+  ctx.fillStyle = '#0d0d0d'
+  ctx.fillRect(0, 0, DW, HEADER_H)
+  ctx.fillStyle = '#c81a1a'
+  ctx.fillRect(0, HEADER_H - 3, DW, 3)
+
+  ctx.fillStyle = '#444'
+  ctx.font = `500 18px "Barlow", sans-serif`
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('COMPARATIVA', 30, HEADER_H * 0.32)
+  ctx.fillStyle = '#888'
+  ctx.font = `700 18px "Barlow Condensed", "Arial Narrow", sans-serif`
+  ctx.fillText('Tabla de estadísticas', 30, HEADER_H * 0.72)
+
+  const halfW = DW / 2
+  const areaY = HEADER_H + 70
+  const areaH = DH - areaY - 30
+
+  await drawHalfTable(ctx, sideA.player, tableIdA, 0, halfW, areaY, areaH)
+  await drawHalfTable(ctx, sideB.player, tableIdB, halfW, halfW, areaY, areaH)
+
+  ctx.strokeStyle = '#2a2a2a'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(halfW, HEADER_H + 20)
+  ctx.lineTo(halfW, DH - 20)
+  ctx.stroke()
+}
+
 async function drawComparativaStatsSlide(ctx, sideA, sideB, pageLabel, chartIdsA, chartIdsB) {
   const HEADER_H = 90
   ctx.fillStyle = '#131313'
@@ -194,7 +260,7 @@ export async function generateComparativaPDF(sideA, sideB, onProgress) {
   const pagesA = chunk(chartIdsA, 4) // 2x2 por mitad
   const pagesB = chunk(chartIdsB, 4)
   const totalContentPages = Math.max(pagesA.length, pagesB.length, 1)
-  const totalSlides = 1 + totalContentPages
+  const totalSlides = 2 + totalContentPages // portada + tabla + páginas de gráficas
 
   for (let si = 0; si < totalSlides; si++) {
     onProgress?.(Math.round((si / totalSlides) * 100), `Diapositiva ${si + 1} de ${totalSlides}...`)
@@ -207,8 +273,10 @@ export async function generateComparativaPDF(sideA, sideB, onProgress) {
 
     if (si === 0) {
       await drawComparativaCover(ctx, sideA, sideB)
+    } else if (si === 1) {
+      await drawComparativaTableSlide(ctx, sideA, sideB, 'pdf-cmp-A-table', 'pdf-cmp-B-table')
     } else {
-      const pageIdx = si - 1
+      const pageIdx = si - 2
       const pageLabel = totalContentPages > 1 ? `Estadísticas ${pageIdx + 1}/${totalContentPages}` : 'Estadísticas'
       await drawComparativaStatsSlide(
         ctx, sideA, sideB, pageLabel,

@@ -187,7 +187,7 @@ function ComparativaSide({ side, PL, jornadas, torneos, roleGroups, defaultId, o
       </div>
 
       {/* Tabla */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 20 }}>
+      <div id={`pdf-cmp-${side}-table`} className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 20 }}>
         <div style={{ padding: '10px 14px', background: 'var(--s2)', borderBottom: '1px solid var(--border)' }}>
           <div style={{
             fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12,
