@@ -43,22 +43,22 @@ export default function ColectivoPanel({ D, labels: rawLabels, jornadaLabel }) {
         </ChartCard>
       </div>
 
-      <div className="g2">
+      <div className="g1">
         <ChartCard id="pdf-chart-centros" title="Centros & Centros Logrados">
           <Legend items={[{ type: 'line', color: GOLD, label: 'Efectividad' }, { color: RED, label: 'Centros' }, { color: '#ccc', label: 'Logrados' }]} />
           <BarLineChart labels={labels} d={D.centros} />
         </ChartCard>
-        <ChartCard id="pdf-chart-atpos" title="Ataques Posicionales">
-          <Legend items={[{ type: 'line', color: GOLD, label: 'Efectividad' }, { color: RED, label: 'At. posicionales' }, { color: '#ccc', label: 'Con remate' }]} />
-          <BarLineChart labels={labels} d={D.atPos} />
-        </ChartCard>
       </div>
 
       <SectionHeader title="Posesión" right="Jornadas seleccionadas" />
-      <div className="g1">
+      <div className="g2">
         <ChartCard id="pdf-chart-posesion" title="Posesión % & Promedio Pases por Posesión">
           <Legend items={[{ color: RED, label: 'Posesión %' }, { type: 'line', color: GOLD, label: 'Pases/posesión' }]} />
           <PosesionChart labels={labels} posesion={D.posesion} pasesPos={D.pasesPos} />
+        </ChartCard>
+        <ChartCard id="pdf-chart-atpos" title="Ataques Posicionales">
+          <Legend items={[{ type: 'line', color: GOLD, label: 'Efectividad' }, { color: RED, label: 'At. posicionales' }, { color: '#ccc', label: 'Con remate' }]} />
+          <BarLineChart labels={labels} d={D.atPos} />
         </ChartCard>
       </div>
 
