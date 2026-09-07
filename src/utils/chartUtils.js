@@ -124,6 +124,7 @@ ChartJS.register(DatalabelsPlugin)
 export const baseOptions = (y2 = false, maxY) => ({
   responsive: true,
   maintainAspectRatio: true,
+  layout: { padding: { top: 22 } },
   plugins: { legend: { display: false } },
   scales: {
     x: { grid: GRID, ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, font: { size: 10 } } },
