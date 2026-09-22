@@ -31,12 +31,36 @@ function aggregateByTeam(rows, labels, activeTorneos, metricKey) {
   return Object.values(byTeam)
 }
 
+function Switch({ checked, onChange, label }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+      {label && <span style={{ fontSize: 11, color: 'var(--gray3)', letterSpacing: 0.5 }}>{label}</span>}
+      <span
+        onClick={() => onChange(!checked)}
+        style={{
+          width: 38, height: 22, borderRadius: 11, position: 'relative',
+          background: checked ? RED : '#3a3a3a', transition: 'background .2s', flexShrink: 0,
+        }}
+      >
+        <span style={{
+          position: 'absolute', top: 2, left: checked ? 18 : 2,
+          width: 18, height: 18, borderRadius: '50%', background: '#fff',
+          transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+        }} />
+      </span>
+    </label>
+  )
+}
+
 // ── Ranking chart ─────────────────────────────────────────────
 function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
   const metrics    = useMetrics(rows)
   const [metric, setMetric]   = useState(metrics[0] || '')
   const [mode, setMode]       = useState('total') // total | promedio
   const [showJornada, setShowJornada] = useState(false) // false=agregado, true=por jornada
+  const [compareTeam, setCompareTeam] = useState('') // '' = ninguno
+  const [viewMode, setViewMode]       = useState('chart') // chart | table
+  const [sortDir, setSortDir]         = useState('desc')
 
   // Update default metric when metrics load
   React.useEffect(() => { if (metrics.length && !metrics.includes(metric)) setMetric(metrics[0]) }, [metrics])
@@ -52,6 +76,14 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
 
   const necaxaRank  = aggregated.findIndex(t => t.equipo === NECAXA) + 1
   const necaxaData  = aggregated.find(t => t.equipo === NECAXA)
+  const compareRank = compareTeam ? aggregated.findIndex(t => t.equipo === compareTeam) + 1 : 0
+  const compareData = compareTeam ? aggregated.find(t => t.equipo === compareTeam) : null
+
+  const tableRows = useMemo(() => {
+    const arr = [...aggregated]
+    arr.sort((a, b) => sortDir === 'desc' ? b.value - a.value : a.value - b.value)
+    return arr
+  }, [aggregated, sortDir])
 
   // ── Vista por jornada ──────────────────────────────────────
   const jornadaData = useMemo(() => {
@@ -80,7 +112,9 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
 
   if (!metrics.length) return <div style={{ color: 'var(--gray)', fontSize: 12, padding: 24 }}>Sin datos disponibles</div>
 
-  const barColors = aggregated.map(t => t.equipo === NECAXA ? RED : 'rgba(255,255,255,0.12)')
+  const barColors = aggregated.map(t =>
+    t.equipo === NECAXA ? RED : (compareTeam && t.equipo === compareTeam ? GOLD : 'rgba(255,255,255,0.12)')
+  )
   const barH = Math.max(320, aggregated.length * 28)
 
   const btnStyle = (active) => ({
@@ -124,31 +158,113 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
         >
           {metrics.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
+
+        {!showJornada && <>
+          <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
+          {/* Comparar con otro equipo */}
+          <select
+            value={compareTeam}
+            onChange={e => setCompareTeam(e.target.value)}
+            style={{
+              background: '#111', border: `1px solid ${compareTeam ? GOLD : 'var(--border)'}`, borderRadius: 4,
+              color: compareTeam ? GOLD : 'var(--white)', padding: '5px 10px', fontSize: 12,
+              fontFamily: "'Barlow', sans-serif", cursor: 'pointer', maxWidth: 200,
+            }}
+          >
+            <option value="">Comparar con...</option>
+            {aggregated.filter(t => t.equipo !== NECAXA).map(t => (
+              <option key={t.equipo} value={t.equipo}>{t.equipo}</option>
+            ))}
+          </select>
+          <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
+          <Switch checked={viewMode === 'table'} onChange={v => setViewMode(v ? 'table' : 'chart')} label="Ver tabla" />
+        </>}
       </div>
 
-      {/* Necaxa badge */}
-      {!showJornada && necaxaData && (
+      {/* Necaxa badge + equipo comparado */}
+      {!showJornada && (necaxaData || compareData) && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-          <div style={{ background: '#1a1a1a', border: `1px solid ${RED}`, borderRadius: 6, padding: '10px 20px', display: 'flex', gap: 16, alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase' }}>Ranking Necaxa</div>
-              <div style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Barlow Condensed', sans-serif", color: necaxaRank <= 3 ? GOLD : 'var(--white)', letterSpacing: 1 }}>
-                #{necaxaRank} <span style={{ fontSize: 13, color: 'var(--gray)', fontWeight: 400 }}>de {aggregated.length}</span>
+          {necaxaData && (
+            <div style={{ background: '#1a1a1a', border: `1px solid ${RED}`, borderRadius: 6, padding: '10px 20px', display: 'flex', gap: 16, alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase' }}>Ranking Necaxa</div>
+                <div style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Barlow Condensed', sans-serif", color: necaxaRank <= 3 ? GOLD : 'var(--white)', letterSpacing: 1 }}>
+                  #{necaxaRank} <span style={{ fontSize: 13, color: 'var(--gray)', fontWeight: 400 }}>de {aggregated.length}</span>
+                </div>
+              </div>
+              <div style={{ width: 1, height: 40, background: 'var(--border)' }} />
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase' }}>{metric}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'Barlow Condensed', sans-serif", color: RED }}>
+                  {necaxaData.value.toFixed(2)}
+                </div>
               </div>
             </div>
-            <div style={{ width: 1, height: 40, background: 'var(--border)' }} />
-            <div>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase' }}>{metric}</div>
-              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'Barlow Condensed', sans-serif", color: RED }}>
-                {necaxaData.value.toFixed(2)}
+          )}
+          {compareData && (
+            <div style={{ background: '#1a1a1a', border: `1px solid ${GOLD}`, borderRadius: 6, padding: '10px 20px', display: 'flex', gap: 16, alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase' }}>Ranking {compareData.equipo}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Barlow Condensed', sans-serif", color: compareRank <= 3 ? GOLD : 'var(--white)', letterSpacing: 1 }}>
+                  #{compareRank} <span style={{ fontSize: 13, color: 'var(--gray)', fontWeight: 400 }}>de {aggregated.length}</span>
+                </div>
+              </div>
+              <div style={{ width: 1, height: 40, background: 'var(--border)' }} />
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase' }}>{metric}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'Barlow Condensed', sans-serif", color: GOLD }}>
+                  {compareData.value.toFixed(2)}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* Chart */}
+      {/* Chart / Tabla */}
       {!showJornada ? (
+        viewMode === 'table' ? (
+          <div style={{ maxHeight: 560, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 4 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ position: 'sticky', top: 0, background: '#161616', zIndex: 1 }}>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '8px 14px', textAlign: 'left', fontSize: 9, color: 'var(--gray2)', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 600 }}>#</th>
+                  <th style={{ padding: '8px 14px', textAlign: 'left', fontSize: 9, color: 'var(--gray2)', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 600 }}>Equipo</th>
+                  <th
+                    onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+                    style={{ padding: '8px 14px', textAlign: 'right', fontSize: 9, color: 'var(--gray2)', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}
+                    title="Ordenar"
+                  >
+                    {metric} {sortDir === 'desc' ? '▼' : '▲'}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map((t, idx) => {
+                  const isNecaxa = t.equipo === NECAXA
+                  const isCompare = compareTeam && t.equipo === compareTeam
+                  return (
+                    <tr key={t.equipo} style={{
+                      borderBottom: '1px solid var(--border)',
+                      background: isNecaxa ? 'rgba(200,26,26,0.12)' : isCompare ? 'rgba(232,184,50,0.10)' : (idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)'),
+                    }}>
+                      <td style={{ padding: '7px 14px', fontSize: 12, color: 'var(--gray)' }}>{idx + 1}</td>
+                      <td style={{
+                        padding: '7px 14px', fontSize: 12,
+                        color: isNecaxa ? '#fff' : isCompare ? GOLD : 'var(--gray3)',
+                        fontWeight: isNecaxa || isCompare ? 700 : 400,
+                      }}>{t.equipo}</td>
+                      <td style={{
+                        padding: '7px 14px', textAlign: 'right', fontSize: 13, fontWeight: 700,
+                        color: isNecaxa ? RED : isCompare ? GOLD : 'var(--white)',
+                      }}>{t.value.toFixed(2)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
         <div style={{ height: barH }}>
           <Bar
             data={{
@@ -170,6 +286,7 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
             }}
           />
         </div>
+        )
       ) : jornadaData && (
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
