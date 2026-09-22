@@ -302,13 +302,63 @@ async function drawMetricPage(ctx, crestImg, params) {
 
 function headerHeightFor(n) { return Math.min(760, Math.max(400, n * 26)) }
 
+// ── Carátula ──────────────────────────────────────────────────────────
+function drawRankingsCover(ctx, crestImg) {
+  ctx.fillStyle = '#161616'
+  ctx.fillRect(0, 0, DW, DH)
+
+  if (crestImg) {
+    ctx.save()
+    ctx.globalAlpha = 0.5
+    ctx.filter = 'grayscale(1) brightness(0.55)'
+    const h = DH * 1.35
+    const w = h * (crestImg.naturalWidth / crestImg.naturalHeight)
+    ctx.drawImage(crestImg, -w * 0.22, DH * 0.5 - h / 2, w, h)
+    ctx.restore()
+  }
+
+  const tx = DW * 0.555, ty = DH * 0.47
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = '#9a9a9a'
+  ctx.font = `800 68px "Barlow Condensed", "Arial Narrow", sans-serif`
+  ctx.fillText('INFORME', tx, ty)
+
+  ctx.strokeStyle = '#555'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(tx + 3, ty + 22)
+  ctx.lineTo(DW - 140, ty + 22)
+  ctx.stroke()
+
+  ctx.fillStyle = '#888'
+  ctx.fillRect(tx + 3, ty + 40, 3, 38)
+  ctx.fillStyle = '#eee'
+  ctx.font = `700 32px "Barlow Condensed", "Arial Narrow", sans-serif`
+  ctx.fillText('PRE PARTIDO', tx + 22, ty + 68)
+}
+
 export async function generateRankingsPDF(jobs, onProgress) {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [W, H], compress: true })
   const crestImg = await loadImage(CREST_URL).catch(() => null)
 
+  const totalSlides = 1 + jobs.length
+
+  // Carátula
+  onProgress?.(0, 'Portada...')
+  {
+    const canvas = document.createElement('canvas')
+    canvas.width = W
+    canvas.height = H
+    const ctx = canvas.getContext('2d')
+    ctx.scale(W / DW, H / DH)
+    drawRankingsCover(ctx, crestImg)
+    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, W, H)
+  }
+
   for (let i = 0; i < jobs.length; i++) {
-    onProgress?.(Math.round((i / jobs.length) * 100), `${jobs[i].metric} (${i + 1}/${jobs.length})...`)
+    onProgress?.(Math.round(((i + 1) / totalSlides) * 100), `${jobs[i].metric} (${i + 1}/${jobs.length})...`)
     const canvas = document.createElement('canvas')
     canvas.width = W
     canvas.height = H
@@ -316,7 +366,7 @@ export async function generateRankingsPDF(jobs, onProgress) {
     ctx.scale(W / DW, H / DH)
     await drawMetricPage(ctx, crestImg, jobs[i])
     const imgData = canvas.toDataURL('image/png')
-    if (i > 0) doc.addPage([W, H], 'landscape')
+    doc.addPage([W, H], 'landscape')
     doc.addImage(imgData, 'PNG', 0, 0, W, H)
   }
   onProgress?.(100, 'Guardando...')
