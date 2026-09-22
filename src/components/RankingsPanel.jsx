@@ -95,20 +95,23 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
     )
     const filtered = labels?.length ? jornadas.filter(j => labels.includes(j)) : jornadas
     const allTeams = [...new Set(rows.map(r => r.equipo || r.Equipo).filter(Boolean))]
-    const necaxaVals = filtered.map(j => {
-      const row = rows.find(r => jKey(r.torneo, r.jornada) === j && (r.equipo === NECAXA || r.Equipo === NECAXA))
+    const valsFor = (team) => filtered.map(j => {
+      const row = rows.find(r => jKey(r.torneo, r.jornada) === j && (r.equipo === team || r.Equipo === team))
       return row ? (row[metric] || 0) : 0
     })
-    const rankPerJ = filtered.map((j, ji) => {
+    const necaxaVals = valsFor(NECAXA)
+    const compareVals = compareTeam ? valsFor(compareTeam) : null
+    const rankFor = (vals) => filtered.map((j, ji) => {
       const allVals = allTeams.map(eq => {
         const row = rows.find(r => jKey(r.torneo, r.jornada) === j && (r.equipo === eq || r.Equipo === eq))
         return row ? (row[metric] || 0) : 0
       }).sort((a, b) => b - a)
-      const necVal = necaxaVals[ji]
-      return allVals.indexOf(necVal) + 1
+      return allVals.indexOf(vals[ji]) + 1
     })
-    return { jornadas: filtered, jornadasDisplay: formatJornadaLabels(filtered), necaxaVals, rankPerJ }
-  }, [showJornada, rows, labels, activeTorneos, metric])
+    const rankPerJ = rankFor(necaxaVals)
+    const compareRankPerJ = compareVals ? rankFor(compareVals) : null
+    return { jornadas: filtered, jornadasDisplay: formatJornadaLabels(filtered), necaxaVals, rankPerJ, compareVals, compareRankPerJ }
+  }, [showJornada, rows, labels, activeTorneos, metric, compareTeam])
 
   if (!metrics.length) return <div style={{ color: 'var(--gray)', fontSize: 12, padding: 24 }}>Sin datos disponibles</div>
 
@@ -143,7 +146,7 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
         {/* Vista agregada / por jornada */}
         <div style={{ display: 'flex', gap: 4 }}>
           <button onClick={() => setShowJornada(false)} style={btnStyle(!showJornada)}>Ranking general</button>
-          <button onClick={() => setShowJornada(true)}  style={btnStyle(showJornada)}>Evolución Necaxa</button>
+          <button onClick={() => setShowJornada(true)}  style={btnStyle(showJornada)}>Evolución</button>
         </div>
         <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
         {/* Metric selector */}
@@ -159,23 +162,24 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
           {metrics.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
 
+        <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
+        {/* Comparar con otro equipo */}
+        <select
+          value={compareTeam}
+          onChange={e => setCompareTeam(e.target.value)}
+          style={{
+            background: '#111', border: `1px solid ${compareTeam ? GOLD : 'var(--border)'}`, borderRadius: 4,
+            color: compareTeam ? GOLD : 'var(--white)', padding: '5px 10px', fontSize: 12,
+            fontFamily: "'Barlow', sans-serif", cursor: 'pointer', maxWidth: 200,
+          }}
+        >
+          <option value="">Comparar con...</option>
+          {aggregated.filter(t => t.equipo !== NECAXA).map(t => (
+            <option key={t.equipo} value={t.equipo}>{t.equipo}</option>
+          ))}
+        </select>
+
         {!showJornada && <>
-          <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
-          {/* Comparar con otro equipo */}
-          <select
-            value={compareTeam}
-            onChange={e => setCompareTeam(e.target.value)}
-            style={{
-              background: '#111', border: `1px solid ${compareTeam ? GOLD : 'var(--border)'}`, borderRadius: 4,
-              color: compareTeam ? GOLD : 'var(--white)', padding: '5px 10px', fontSize: 12,
-              fontFamily: "'Barlow', sans-serif", cursor: 'pointer', maxWidth: 200,
-            }}
-          >
-            <option value="">Comparar con...</option>
-            {aggregated.filter(t => t.equipo !== NECAXA).map(t => (
-              <option key={t.equipo} value={t.equipo}>{t.equipo}</option>
-            ))}
-          </select>
           <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
           <Switch checked={viewMode === 'table'} onChange={v => setViewMode(v ? 'table' : 'chart')} label="Ver tabla" />
         </>}
@@ -224,7 +228,7 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
       {/* Chart / Tabla */}
       {!showJornada ? (
         viewMode === 'table' ? (
-          <div style={{ maxHeight: 560, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 4 }}>
+          <div style={{ border: '1px solid var(--border)', borderRadius: 4, maxWidth: 640 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ position: 'sticky', top: 0, background: '#161616', zIndex: 1 }}>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -292,12 +296,25 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {/* Valor por jornada */}
             <div>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Valor Necaxa por jornada</div>
+              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Valor por jornada</div>
+              {compareTeam && (
+                <div style={{ display: 'flex', gap: 14, marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, color: 'var(--gray3)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: 2, background: RED, display: 'inline-block' }} />Necaxa
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--gray3)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: 2, background: GOLD, display: 'inline-block' }} />{compareTeam}
+                  </span>
+                </div>
+              )}
               <div style={{ height: 220 }}>
                 <Bar
                   data={{
                     labels: jornadaData.jornadasDisplay,
-                    datasets: [{ data: jornadaData.necaxaVals, backgroundColor: RED, borderRadius: 3, _barLabels: true }],
+                    datasets: [
+                      { label: 'Necaxa', data: jornadaData.necaxaVals, backgroundColor: RED, borderRadius: 3, _barLabels: true },
+                      ...(jornadaData.compareVals ? [{ label: compareTeam, data: jornadaData.compareVals, backgroundColor: GOLD, borderRadius: 3, _barLabels: true }] : []),
+                    ],
                   }}
                   options={{
                     responsive: true, maintainAspectRatio: false,
@@ -314,18 +331,34 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
                 <Bar
                   data={{
                     labels: jornadaData.jornadasDisplay,
-                    datasets: [{
-                      type: 'line',
-                      data: jornadaData.rankPerJ,
-                      borderColor: GOLD,
-                      backgroundColor: 'transparent',
-                      pointBackgroundColor: jornadaData.rankPerJ.map(r => r <= 3 ? GOLD : r <= 9 ? WHT : RED),
-                      pointRadius: 5,
-                      pointHoverRadius: 7,
-                      borderWidth: 2,
-                      tension: 0.3,
-                      _intLine: true,
-                    }],
+                    datasets: [
+                      {
+                        type: 'line',
+                        label: 'Necaxa',
+                        data: jornadaData.rankPerJ,
+                        borderColor: RED,
+                        backgroundColor: 'transparent',
+                        pointBackgroundColor: RED,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        _intLine: true,
+                      },
+                      ...(jornadaData.compareRankPerJ ? [{
+                        type: 'line',
+                        label: compareTeam,
+                        data: jornadaData.compareRankPerJ,
+                        borderColor: GOLD,
+                        backgroundColor: 'transparent',
+                        pointBackgroundColor: GOLD,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        _intLine: true,
+                      }] : []),
+                    ],
                   }}
                   options={{
                     responsive: true, maintainAspectRatio: false,
