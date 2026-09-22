@@ -5,10 +5,34 @@ import { jKey, formatJornadaLabels, sortJornadaKeysByDate } from '../hooks/useSh
 import { loadImage, roundRect } from './PDFExport'
 
 const NECAXA = 'Necaxa'
-const GRID_LIGHT = { color: 'rgba(0,0,0,0.08)' }
 const CREST_URL = 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Club_Necaxa_Logo.svg'
 const W = 2560, H = 1440 // resolución de salida
 const DW = 1920, DH = 1080 // sistema de coordenadas de diseño
+
+function getRankingsTheme(mode) {
+  const light = mode === 'light'
+  return {
+    mode,
+    pageBg:     light ? '#ffffff' : '#131313',
+    headerLine: light ? '#ddd' : '#333',
+    textTitle:  light ? '#151515' : '#f0f0f0',
+    textBody:   light ? '#333' : '#ddd',
+    textMuted:  light ? '#666' : '#999',
+    textFaint:  light ? '#999' : '#666',
+    cardBg:     light ? '#fafafa' : '#1a1a1a',
+    cardBorder: light ? '#eee' : '#2f2f2f',
+    tableHeadBg:light ? '#f2f2f2' : '#1e1e1e',
+    tableZebra: light ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)',
+    gridColor:  light ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
+    tickColor:  light ? '#555' : '#aaa',
+    coverInforme: light ? '#8a8a8a' : '#9a9a9a',
+    coverLine:  light ? '#ccc' : '#555',
+    coverTitle: light ? '#1a1a1a' : '#eee',
+    coverCrestFilter: light
+      ? 'grayscale(1) brightness(1.7) contrast(0.7)'
+      : 'grayscale(1) brightness(0.55)',
+  }
+}
 
 // ── Funciones puras de datos (misma lógica que RankingChart, sin React) ──
 function aggregateByTeam(rows, labels, activeTorneos, metricKey) {
@@ -87,9 +111,10 @@ function chartToImage(config, width, height) {
   })
 }
 
-async function rankingBarImage(aggregated, compareTeam, width, height) {
+async function rankingBarImage(aggregated, compareTeam, width, height, theme) {
+  const otherColor = theme.mode === 'light' ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)'
   const colors = aggregated.map(t =>
-    t.equipo === NECAXA ? RED : (compareTeam && t.equipo === compareTeam ? GOLD : 'rgba(0,0,0,0.18)')
+    t.equipo === NECAXA ? RED : (compareTeam && t.equipo === compareTeam ? GOLD : otherColor)
   )
   const url = await chartToImage({
     type: 'bar',
@@ -101,9 +126,9 @@ async function rankingBarImage(aggregated, compareTeam, width, height) {
       indexAxis: 'y', maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: GRID_LIGHT, beginAtZero: true, ticks: { color: '#555', font: { size: 20 } } },
+        x: { grid: { color: theme.gridColor }, beginAtZero: true, ticks: { color: theme.tickColor, font: { size: 20 } } },
         y: { grid: { display: false }, ticks: {
-          color: (ctx) => aggregated[ctx.index]?.equipo === NECAXA ? '#151515' : (compareTeam && aggregated[ctx.index]?.equipo === compareTeam ? '#8a6d10' : '#555'),
+          color: (ctx) => aggregated[ctx.index]?.equipo === NECAXA ? theme.textTitle : (compareTeam && aggregated[ctx.index]?.equipo === compareTeam ? GOLD : theme.tickColor),
           font: { size: 20 },
         } },
       },
@@ -112,7 +137,7 @@ async function rankingBarImage(aggregated, compareTeam, width, height) {
   return url
 }
 
-async function evoImages(evo, evoColor, width, height) {
+async function evoImages(evo, evoColor, width, height, theme) {
   const valUrl = await chartToImage({
     type: 'bar',
     data: { labels: evo.jornadasDisplay, datasets: [{ data: evo.teamVals, backgroundColor: evoColor, borderRadius: 3, _barLabels: true }] },
@@ -120,8 +145,8 @@ async function evoImages(evo, evoColor, width, height) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: GRID_LIGHT, ticks: { color: '#555', font: { size: 18 } } },
-        y: { grid: GRID_LIGHT, beginAtZero: true, ticks: { color: '#555', font: { size: 18 } } },
+        x: { grid: { color: theme.gridColor }, ticks: { color: theme.tickColor, font: { size: 18 } } },
+        y: { grid: { color: theme.gridColor }, beginAtZero: true, ticks: { color: theme.tickColor, font: { size: 18 } } },
       },
     },
   }, width, height)
@@ -138,8 +163,8 @@ async function evoImages(evo, evoColor, width, height) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: GRID_LIGHT, ticks: { color: '#555', font: { size: 18 } } },
-        y: { grid: GRID_LIGHT, reverse: true, min: 1, ticks: { stepSize: 1, color: '#555', font: { size: 18 } } },
+        x: { grid: { color: theme.gridColor }, ticks: { color: theme.tickColor, font: { size: 18 } } },
+        y: { grid: { color: theme.gridColor }, reverse: true, min: 1, ticks: { stepSize: 1, color: theme.tickColor, font: { size: 18 } } },
       },
     },
   }, width, height)
@@ -147,19 +172,19 @@ async function evoImages(evo, evoColor, width, height) {
 }
 
 // ── Dibuja una página completa por métrica ──────────────────────────────
-async function drawMetricPage(ctx, crestImg, params) {
+async function drawMetricPage(ctx, crestImg, params, theme) {
   const {
     metric, jornadaLabel, aggregated, necaxaData, necaxaRank, compareTeam, compareData, compareRank,
     includeTable, includeChart, includeEvo, evo, evoTeam, evoColor,
   } = params
   const PAD = 40
 
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = theme.pageBg
   ctx.fillRect(0, 0, DW, DH)
 
   // Header
   ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `700 20px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.textAlign = 'left'
   ctx.fillText('PRE PARTIDO', PAD, 40)
@@ -167,10 +192,10 @@ async function drawMetricPage(ctx, crestImg, params) {
   ctx.fillText('RANKINGS', DW - PAD, 40)
   if (evo?.missingDisplay?.length) {
     ctx.font = `italic 600 18px "Barlow", sans-serif`
-    ctx.fillStyle = '#777'
+    ctx.fillStyle = theme.textFaint
     ctx.fillText(`*No se cuenta con datos de la ${evo.missingDisplay.join(', ')}*`, DW - PAD, 76)
   }
-  ctx.strokeStyle = '#ddd'
+  ctx.strokeStyle = theme.headerLine
   ctx.lineWidth = 1
   ctx.beginPath()
   ctx.moveTo(PAD, 56)
@@ -178,10 +203,10 @@ async function drawMetricPage(ctx, crestImg, params) {
   ctx.stroke()
 
   ctx.textAlign = 'left'
-  ctx.fillStyle = '#151515'
+  ctx.fillStyle = theme.textTitle
   ctx.font = `900 52px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(metric.toUpperCase(), PAD, 130)
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `600 22px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(jornadaLabel, PAD, 162)
 
@@ -199,21 +224,21 @@ async function drawMetricPage(ctx, crestImg, params) {
     roundRect(ctx, x, badgeY, 330, badgeH, 4)
     ctx.stroke()
     ctx.textAlign = 'left'
-    ctx.fillStyle = '#777'
+    ctx.fillStyle = theme.textFaint
     ctx.font = `600 13px "Barlow Condensed", "Arial Narrow", sans-serif`
     ctx.fillText(`RANKING ${teamLabel.toUpperCase()}`, x + 16, badgeY + 22)
-    ctx.fillStyle = '#151515'
+    ctx.fillStyle = theme.textTitle
     ctx.font = `900 30px "Barlow Condensed", "Arial Narrow", sans-serif`
     ctx.fillText(`#${rank}`, x + 16, badgeY + 54)
     ctx.font = `500 14px "Barlow", sans-serif`
-    ctx.fillStyle = '#777'
+    ctx.fillStyle = theme.textFaint
     ctx.fillText(`de ${aggregated.length}`, x + 16 + ctx.measureText(`#${rank}`).width + 8, badgeY + 54)
-    ctx.strokeStyle = '#ddd'
+    ctx.strokeStyle = theme.headerLine
     ctx.beginPath()
     ctx.moveTo(x + 170, badgeY + 12)
     ctx.lineTo(x + 170, badgeY + 58)
     ctx.stroke()
-    ctx.fillStyle = '#777'
+    ctx.fillStyle = theme.textFaint
     ctx.font = `600 13px "Barlow Condensed", "Arial Narrow", sans-serif`
     const metricShort = metric.length > 22 ? metric.slice(0, 20) + '…' : metric
     ctx.fillText(metricShort.toUpperCase(), x + 186, badgeY + 22)
@@ -233,12 +258,12 @@ async function drawMetricPage(ctx, crestImg, params) {
   if (includeTable) {
     const rowH = 27
     const headerH = 32
-    ctx.strokeStyle = '#ddd'
+    ctx.strokeStyle = theme.headerLine
     ctx.lineWidth = 1
     ctx.strokeRect(PAD, contentY, leftW, headerH + aggregated.length * rowH)
-    ctx.fillStyle = '#f2f2f2'
+    ctx.fillStyle = theme.tableHeadBg
     ctx.fillRect(PAD, contentY, leftW, headerH)
-    ctx.fillStyle = '#555'
+    ctx.fillStyle = theme.tickColor
     ctx.font = `600 11px "Barlow Condensed", "Arial Narrow", sans-serif`
     ctx.textAlign = 'left'
     ctx.fillText('#', PAD + 14, contentY + 20)
@@ -250,17 +275,17 @@ async function drawMetricPage(ctx, crestImg, params) {
       const isN = t.equipo === NECAXA
       const isC = compareTeam && t.equipo === compareTeam
       if (isN) { ctx.fillStyle = 'rgba(200,26,26,0.16)'; ctx.fillRect(PAD, y, leftW, rowH) }
-      else if (isC) { ctx.fillStyle = 'rgba(232,184,50,0.14)'; ctx.fillRect(PAD, y, leftW, rowH) }
-      else if (idx % 2 === 1) { ctx.fillStyle = 'rgba(0,0,0,0.03)'; ctx.fillRect(PAD, y, leftW, rowH) }
+      else if (isC) { ctx.fillStyle = 'rgba(232,184,50,0.16)'; ctx.fillRect(PAD, y, leftW, rowH) }
+      else if (idx % 2 === 1) { ctx.fillStyle = theme.tableZebra; ctx.fillRect(PAD, y, leftW, rowH) }
       ctx.textAlign = 'left'
-      ctx.fillStyle = '#999'
+      ctx.fillStyle = theme.textFaint
       ctx.font = `500 13px "Barlow", sans-serif`
       ctx.fillText(String(idx + 1), PAD + 14, y + 19)
-      ctx.fillStyle = isN ? '#151515' : isC ? '#8a6d10' : '#333'
+      ctx.fillStyle = isN ? theme.textTitle : isC ? GOLD : theme.textBody
       ctx.font = `${isN || isC ? '700' : '400'} 13px "Barlow", sans-serif`
       ctx.fillText(t.equipo, PAD + 50, y + 19)
       ctx.textAlign = 'right'
-      ctx.fillStyle = isN ? RED : isC ? '#8a6d10' : '#222'
+      ctx.fillStyle = isN ? RED : isC ? GOLD : theme.textTitle
       ctx.font = `700 14px "Barlow", sans-serif`
       ctx.fillText(t.value.toFixed(2), PAD + leftW - 14, y + 19)
     })
@@ -271,12 +296,12 @@ async function drawMetricPage(ctx, crestImg, params) {
     let cy = contentY
     if (includeChart) {
       const chartH = includeEvo ? 560 : (headerHeightFor(aggregated.length))
-      const img = await loadImage(await rankingBarImage(aggregated, compareTeam, rightW * (W / DW), chartH * (W / DW))).catch(() => null)
+      const img = await loadImage(await rankingBarImage(aggregated, compareTeam, rightW * (W / DW), chartH * (W / DW), theme)).catch(() => null)
       if (img) {
-        ctx.fillStyle = '#fafafa'
+        ctx.fillStyle = theme.cardBg
         roundRect(ctx, rightX, cy, rightW, chartH, 4)
         ctx.fill()
-        ctx.strokeStyle = '#eee'
+        ctx.strokeStyle = theme.cardBorder
         ctx.lineWidth = 1
         ctx.stroke()
         ctx.drawImage(img, rightX, cy, rightW, chartH)
@@ -286,17 +311,17 @@ async function drawMetricPage(ctx, crestImg, params) {
     if (includeEvo && evo) {
       const evoH = DH - PAD - cy
       const halfW = (rightW - 16) / 2
-      const { valUrl, rankUrl } = await evoImages(evo, evoColor, halfW * (W / DW), evoH * (W / DW))
+      const { valUrl, rankUrl } = await evoImages(evo, evoColor, halfW * (W / DW), evoH * (W / DW), theme)
       const titles = [`VALOR ${evoTeam.toUpperCase()} POR JORNADA`, `POSICIÓN DE ${evoTeam.toUpperCase()} POR JORNADA`]
       for (const [i, src] of [valUrl, rankUrl].entries()) {
         const x = rightX + i * (halfW + 16)
-        ctx.fillStyle = '#fafafa'
+        ctx.fillStyle = theme.cardBg
         roundRect(ctx, x, cy, halfW, evoH, 4)
         ctx.fill()
-        ctx.strokeStyle = '#eee'
+        ctx.strokeStyle = theme.cardBorder
         ctx.lineWidth = 1
         ctx.stroke()
-        ctx.fillStyle = '#555'
+        ctx.fillStyle = theme.tickColor
         ctx.font = `600 12px "Barlow Condensed", "Arial Narrow", sans-serif`
         ctx.textAlign = 'left'
         ctx.fillText(titles[i], x + 10, cy + 18)
@@ -310,14 +335,14 @@ async function drawMetricPage(ctx, crestImg, params) {
 function headerHeightFor(n) { return Math.min(760, Math.max(400, n * 26)) }
 
 // ── Carátula ──────────────────────────────────────────────────────────
-function drawRankingsCover(ctx, crestImg) {
-  ctx.fillStyle = '#ffffff'
+function drawRankingsCover(ctx, crestImg, theme) {
+  ctx.fillStyle = theme.pageBg
   ctx.fillRect(0, 0, DW, DH)
 
   if (crestImg) {
     ctx.save()
     ctx.globalAlpha = 0.5
-    ctx.filter = 'grayscale(1) brightness(1.7) contrast(0.7)'
+    ctx.filter = theme.coverCrestFilter
     const h = DH * 1.35
     const w = h * (crestImg.naturalWidth / crestImg.naturalHeight)
     ctx.drawImage(crestImg, -w * 0.22, DH * 0.5 - h / 2, w, h)
@@ -327,11 +352,11 @@ function drawRankingsCover(ctx, crestImg) {
   const tx = DW * 0.555, ty = DH * 0.47
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = '#8a8a8a'
+  ctx.fillStyle = theme.coverInforme
   ctx.font = `800 68px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText('INFORME', tx, ty)
 
-  ctx.strokeStyle = '#ccc'
+  ctx.strokeStyle = theme.coverLine
   ctx.lineWidth = 1.5
   ctx.beginPath()
   ctx.moveTo(tx + 3, ty + 22)
@@ -340,15 +365,16 @@ function drawRankingsCover(ctx, crestImg) {
 
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(tx + 3, ty + 40, 3, 38)
-  ctx.fillStyle = '#1a1a1a'
+  ctx.fillStyle = theme.coverTitle
   ctx.font = `700 32px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText('PRE PARTIDO', tx + 22, ty + 68)
 }
 
-export async function generateRankingsPDF(jobs, onProgress) {
+export async function generateRankingsPDF(jobs, onProgress, themeMode = 'dark') {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [W, H], compress: true })
   const crestImg = await loadImage(CREST_URL).catch(() => null)
+  const theme = getRankingsTheme(themeMode)
 
   const totalSlides = 1 + jobs.length
 
@@ -360,7 +386,7 @@ export async function generateRankingsPDF(jobs, onProgress) {
     canvas.height = H
     const ctx = canvas.getContext('2d')
     ctx.scale(W / DW, H / DH)
-    drawRankingsCover(ctx, crestImg)
+    drawRankingsCover(ctx, crestImg, theme)
     doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, W, H)
   }
 
@@ -371,7 +397,7 @@ export async function generateRankingsPDF(jobs, onProgress) {
     canvas.height = H
     const ctx = canvas.getContext('2d')
     ctx.scale(W / DW, H / DH)
-    await drawMetricPage(ctx, crestImg, jobs[i])
+    await drawMetricPage(ctx, crestImg, jobs[i], theme)
     const imgData = canvas.toDataURL('image/png')
     doc.addPage([W, H], 'landscape')
     doc.addImage(imgData, 'PNG', 0, 0, W, H)
@@ -387,6 +413,7 @@ export default function RankingsPDFBuilder({ rows, labels, activeTorneos, metric
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [msg, setMsg] = useState('')
+  const [pdfTheme, setPdfTheme] = useState('dark')
 
   const toggleMetric = (m) => {
     setSelected(prev => {
@@ -430,7 +457,7 @@ export default function RankingsPDFBuilder({ rows, labels, activeTorneos, metric
           evo, evoTeam, evoColor,
         }
       })
-      await generateRankingsPDF(jobs, (pct, m) => { setProgress(pct); setMsg(m) })
+      await generateRankingsPDF(jobs, (pct, m) => { setProgress(pct); setMsg(m) }, pdfTheme)
     } catch (e) {
       console.error('PDF error:', e)
       setMsg('Error — revisa la consola')
@@ -501,6 +528,20 @@ export default function RankingsPDFBuilder({ rows, labels, activeTorneos, metric
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
+            <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+              {[['dark', 'Oscuro'], ['light', 'Claro']].map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setPdfTheme(v)}
+                  style={{
+                    padding: '6px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                    fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 0.5,
+                    background: pdfTheme === v ? 'var(--red)' : 'var(--s2)',
+                    color: pdfTheme === v ? '#fff' : 'var(--gray3)',
+                  }}
+                >{label}</button>
+              ))}
+            </div>
             <button
               onClick={handleGenerate}
               disabled={loading || !selectedMetrics.length}

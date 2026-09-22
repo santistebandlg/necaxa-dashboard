@@ -6,6 +6,29 @@ export const H = 1440
 export const DW = 1920 // sistema de coordenadas de diseño — todo el código de dibujo
 export const DH = 1080 // usa estas medidas; W/H son solo el tamaño físico de salida
 
+// ── Paleta compartida para los 4 exportadores de PDF ──────────────────
+// 'dark' es el tema original; 'light' es la opción de fondo blanco.
+// Las tarjetas de gráficas/tabla que vienen de una captura de pantalla
+// (html2canvas) siguen oscuras por dentro en ambos temas — eso lo
+// controla el CSS del dashboard, no este archivo.
+export function getTheme(mode) {
+  const light = mode === 'light'
+  return {
+    mode,
+    pageBg:      light ? '#ffffff' : '#131313',
+    headerBg:    light ? '#ffffff' : '#0d0d0d',
+    headerLine:  light ? '#e2e2e2' : 'transparent',
+    divider:     light ? '#ddd' : '#2a2a2a',
+    accent:      '#c81a1a',
+    textTitle:   light ? '#1a1a1a' : '#f0f0f0',
+    textMuted:   light ? '#888'    : '#888',
+    textFaint:   light ? '#aaa'    : '#444',
+    cardBg:      '#1c1c1c',   // tarjetas de captura, se quedan oscuras siempre
+    cardBorder:  '#2a2a2a',
+    cardEmptyBg: '#252525',
+  }
+}
+
 export function loadImage(src) {
   return new Promise((res, rej) => {
     const img = new window.Image()
@@ -62,7 +85,7 @@ function buildJornadaRange(jornadaLabel) {
 }
 
 // ── Draw cover slide with real image + jornada overlay
-async function drawCover(ctx, coverKey, jornadaRange) {
+async function drawCover(ctx, coverKey, jornadaRange, theme) {
   // Draw base image
   const src = COVER_IMAGES[coverKey]
   if (src) {
@@ -77,11 +100,11 @@ async function drawCover(ctx, coverKey, jornadaRange) {
       const dy = (DH - dh) / 2
       ctx.drawImage(img, dx, dy, dw, dh)
     } catch (e) {
-      ctx.fillStyle = '#1a1a1a'
+      ctx.fillStyle = theme.pageBg
       ctx.fillRect(0, 0, DW, DH)
     }
   } else {
-    ctx.fillStyle = '#1a1a1a'
+    ctx.fillStyle = theme.pageBg
     ctx.fillRect(0, 0, DW, DH)
   }
 
@@ -102,48 +125,50 @@ async function drawCover(ctx, coverKey, jornadaRange) {
 }
 
 // ── Draw content slide
-async function drawContentSlide(ctx, title, jornadaText, chartIds, layout) {
+async function drawContentSlide(ctx, title, jornadaText, chartIds, layout, theme) {
   const PAD      = 36
   const HEADER_H = 100
   const CELL_GAP = 16
   const CARD_PAD = 10
 
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = theme.pageBg
   ctx.fillRect(0, 0, DW, DH)
 
   // Header bar
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = theme.headerBg
   ctx.fillRect(0, 0, DW, HEADER_H)
-  ctx.strokeStyle = '#e2e2e2'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(0, HEADER_H - 2)
-  ctx.lineTo(DW, HEADER_H - 2)
-  ctx.stroke()
-  ctx.fillStyle = '#c81a1a'
+  if (theme.headerLine !== 'transparent') {
+    ctx.strokeStyle = theme.headerLine
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(0, HEADER_H - 2)
+    ctx.lineTo(DW, HEADER_H - 2)
+    ctx.stroke()
+  }
+  ctx.fillStyle = theme.accent
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
   ctx.textBaseline = 'middle'
 
   // Left: section type
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `500 20px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.fillText('RENDIMIENTO', PAD, HEADER_H * 0.32)
 
   // Left: title
-  ctx.fillStyle = '#1a1a1a'
+  ctx.fillStyle = theme.textTitle
   ctx.font = `900 50px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(title.toUpperCase(), PAD, HEADER_H * 0.72)
 
   // Right: últimos partidos
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `500 18px "Barlow", sans-serif`
   ctx.textAlign = 'right'
   ctx.fillText('ÚLTIMOS 5 PARTIDOS', DW - PAD, HEADER_H * 0.32)
 
   // Right: jornada label
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = theme.textFaint
   ctx.font = `700 22px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(jornadaText, DW - PAD, HEADER_H * 0.72)
 
@@ -184,10 +209,10 @@ async function drawContentSlide(ctx, title, jornadaText, chartIds, layout) {
     const y = areaY + row * (cellH + CELL_GAP)
 
     // Card bg
-    ctx.fillStyle = '#1c1c1c'
+    ctx.fillStyle = theme.cardBg
     roundRect(ctx, x, y, cellW, cellH, 6)
     ctx.fill()
-    ctx.strokeStyle = '#2a2a2a'
+    ctx.strokeStyle = theme.cardBorder
     ctx.lineWidth = 1
     ctx.stroke()
 
@@ -198,7 +223,7 @@ async function drawContentSlide(ctx, title, jornadaText, chartIds, layout) {
       ctx.drawImage(img, x + CARD_PAD, y + CARD_PAD, cellW - CARD_PAD * 2, cellH - CARD_PAD * 2)
       ctx.restore()
     } else {
-      ctx.fillStyle = '#252525'
+      ctx.fillStyle = theme.cardEmptyBg
       roundRect(ctx, x + CARD_PAD, y + CARD_PAD, cellW - CARD_PAD * 2, cellH - CARD_PAD * 2, 4)
       ctx.fill()
       ctx.fillStyle = '#444'
@@ -211,9 +236,10 @@ async function drawContentSlide(ctx, title, jornadaText, chartIds, layout) {
 }
 
 // ── Main PDF generation
-export async function generatePDF(jornadaLabel, onProgress) {
+export async function generatePDF(jornadaLabel, onProgress, themeMode = 'dark') {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [W, H], compress: true })
+  const theme = getTheme(themeMode)
 
   const jornadaRange = buildJornadaRange(jornadaLabel)
   const jornadaText  = jornadaRange  // for content slides header
@@ -254,9 +280,9 @@ export async function generatePDF(jornadaLabel, onProgress) {
     ctx.scale(W / DW, H / DH)
 
     if (slide.type === 'cover') {
-      await drawCover(ctx, slide.coverKey, jornadaRange)
+      await drawCover(ctx, slide.coverKey, jornadaRange, theme)
     } else {
-      await drawContentSlide(ctx, slide.title, jornadaText, slide.charts, slide.layout)
+      await drawContentSlide(ctx, slide.title, jornadaText, slide.charts, slide.layout, theme)
     }
 
     const imgData = canvas.toDataURL('image/png')
@@ -268,11 +294,31 @@ export async function generatePDF(jornadaLabel, onProgress) {
   doc.save(`Necaxa_Rendimiento_${jornadaText.replace(/[\s,]/g, '_')}.pdf`)
 }
 
+function ThemeToggle({ value, onChange }) {
+  return (
+    <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+      {[['dark', 'Oscuro'], ['light', 'Claro']].map(([v, label]) => (
+        <button
+          key={v}
+          onClick={() => onChange(v)}
+          style={{
+            padding: '6px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+            fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 0.5,
+            background: value === v ? 'var(--red)' : 'var(--s2)',
+            color: value === v ? '#fff' : 'var(--gray3)',
+          }}
+        >{label}</button>
+      ))}
+    </div>
+  )
+}
+
 // ── Export button
 export default function PDFExportButton({ jornadaLabel }) {
   const [loading,  setLoading]  = useState(false)
   const [progress, setProgress] = useState(0)
   const [msg,      setMsg]      = useState('')
+  const [theme,    setTheme]    = useState('dark')
 
   const handleExport = async () => {
     setLoading(true)
@@ -282,7 +328,7 @@ export default function PDFExportButton({ jornadaLabel }) {
       await generatePDF(jornadaLabel, (pct, message) => {
         setProgress(pct)
         setMsg(message)
-      })
+      }, theme)
     } catch (e) {
       console.error('PDF error:', e)
       setMsg('Error — revisa la consola')
@@ -304,6 +350,7 @@ export default function PDFExportButton({ jornadaLabel }) {
           <span style={{ fontSize: 11, color: 'var(--gray)', letterSpacing: 1, whiteSpace: 'nowrap' }}>{msg}</span>
         </div>
       )}
+      <ThemeToggle value={theme} onChange={setTheme} />
       <button
         onClick={handleExport}
         disabled={loading}

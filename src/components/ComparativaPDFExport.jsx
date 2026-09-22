@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { loadImage, captureChart, roundRect, W, H, DW, DH } from './PDFExport'
+import { loadImage, captureChart, roundRect, getTheme, W, H, DW, DH } from './PDFExport'
 import { getPlayerPhoto } from '../utils/playerPhotos'
 
 function chunk(arr, size) {
@@ -8,7 +8,7 @@ function chunk(arr, size) {
   return out
 }
 
-async function drawHalfCover(ctx, player, rangeLabel, x0, halfW) {
+async function drawHalfCover(ctx, player, rangeLabel, x0, halfW, theme) {
   const cx = x0 + 220, cy = DH / 2, r = 130
 
   ctx.save()
@@ -47,11 +47,11 @@ async function drawHalfCover(ctx, player, rangeLabel, x0, halfW) {
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
 
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `600 22px "Barlow", sans-serif`
   ctx.fillText('NECAXA — COMPARATIVA', tx, cy - 110)
 
-  ctx.fillStyle = '#151515'
+  ctx.fillStyle = theme.textTitle
   ctx.font = `900 64px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), tx, cy - 30, halfW - 460)
 
@@ -59,23 +59,23 @@ async function drawHalfCover(ctx, player, rangeLabel, x0, halfW) {
   ctx.font = `700 32px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText((player.pos || '').toUpperCase(), tx, cy + 18)
 
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = theme.textFaint
   ctx.font = `500 22px "Barlow", sans-serif`
   ctx.fillText(rangeLabel, tx, cy + 68, halfW - 460)
   ctx.fillText(`${player.mins}' jugados · ${player.pct}% del partido`, tx, cy + 100, halfW - 460)
 }
 
-async function drawComparativaCover(ctx, sideA, sideB) {
+async function drawComparativaCover(ctx, sideA, sideB, theme) {
   const halfW = DW / 2
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = theme.pageBg
   ctx.fillRect(0, 0, DW, DH)
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, DH - 6, DW, 6)
 
-  await drawHalfCover(ctx, sideA.player, sideA.rangeLabel, 0, halfW)
-  await drawHalfCover(ctx, sideB.player, sideB.rangeLabel, halfW, halfW)
+  await drawHalfCover(ctx, sideA.player, sideA.rangeLabel, 0, halfW, theme)
+  await drawHalfCover(ctx, sideB.player, sideB.rangeLabel, halfW, halfW, theme)
 
-  ctx.strokeStyle = '#ddd'
+  ctx.strokeStyle = theme.divider
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(halfW, 60)
@@ -93,15 +93,15 @@ async function drawComparativaCover(ctx, sideA, sideB) {
   ctx.fillText('VS', halfW, DH / 2)
 }
 
-async function drawHalfStatsGrid(ctx, player, chartIds, x0, halfW, areaY, areaH) {
+async function drawHalfStatsGrid(ctx, player, chartIds, x0, halfW, areaY, areaH, theme) {
   const PAD = 24, CELL_GAP = 14, CARD_PAD = 8
 
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = '#151515'
+  ctx.fillStyle = theme.textTitle
   ctx.font = `900 32px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), x0 + PAD, areaY - 14)
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `600 16px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.textAlign = 'right'
   ctx.fillText((player.pos || '').toUpperCase(), x0 + halfW - PAD, areaY - 16)
@@ -123,10 +123,10 @@ async function drawHalfStatsGrid(ctx, player, chartIds, x0, halfW, areaY, areaH)
     const x = x0 + PAD + col * (cellW + CELL_GAP)
     const y = gridY + row * (cellH + CELL_GAP)
 
-    ctx.fillStyle = '#1c1c1c'
+    ctx.fillStyle = theme.cardBg
     roundRect(ctx, x, y, cellW, cellH, 6)
     ctx.fill()
-    ctx.strokeStyle = '#2a2a2a'
+    ctx.strokeStyle = theme.cardBorder
     ctx.lineWidth = 1
     ctx.stroke()
 
@@ -137,7 +137,7 @@ async function drawHalfStatsGrid(ctx, player, chartIds, x0, halfW, areaY, areaH)
       ctx.drawImage(img, x + CARD_PAD, y + CARD_PAD, cellW - CARD_PAD * 2, cellH - CARD_PAD * 2)
       ctx.restore()
     } else {
-      ctx.fillStyle = '#252525'
+      ctx.fillStyle = theme.cardEmptyBg
       roundRect(ctx, x + CARD_PAD, y + CARD_PAD, cellW - CARD_PAD * 2, cellH - CARD_PAD * 2, 4)
       ctx.fill()
       ctx.fillStyle = '#444'
@@ -151,11 +151,11 @@ async function drawHalfStatsGrid(ctx, player, chartIds, x0, halfW, areaY, areaH)
   })
 }
 
-async function drawHalfTable(ctx, player, tableId, x0, halfW, areaY, areaH) {
+async function drawHalfTable(ctx, player, tableId, x0, halfW, areaY, areaH, theme) {
   const PAD = 24
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = '#151515'
+  ctx.fillStyle = theme.textTitle
   ctx.font = `900 32px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), x0 + PAD, areaY - 14)
 
@@ -171,7 +171,7 @@ async function drawHalfTable(ctx, player, tableId, x0, halfW, areaY, areaH) {
     const dh = img.naturalHeight * scale
     const dx = x0 + PAD + (areaW - dw) / 2
     const dy = gridY
-    ctx.fillStyle = '#1c1c1c'
+    ctx.fillStyle = theme.cardBg
     roundRect(ctx, dx - 6, dy - 6, dw + 12, dh + 12, 6)
     ctx.fill()
     ctx.drawImage(img, dx, dy, dw, dh)
@@ -184,25 +184,27 @@ async function drawHalfTable(ctx, player, tableId, x0, halfW, areaY, areaH) {
   }
 }
 
-async function drawComparativaTableSlide(ctx, sideA, sideB, tableIdA, tableIdB) {
+async function drawComparativaTableSlide(ctx, sideA, sideB, tableIdA, tableIdB, theme) {
   const HEADER_H = 90
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = theme.pageBg
   ctx.fillRect(0, 0, DW, DH)
-  ctx.strokeStyle = '#e2e2e2'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(0, HEADER_H - 2)
-  ctx.lineTo(DW, HEADER_H - 2)
-  ctx.stroke()
+  if (theme.headerLine !== 'transparent') {
+    ctx.strokeStyle = theme.headerLine
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(0, HEADER_H - 2)
+    ctx.lineTo(DW, HEADER_H - 2)
+    ctx.stroke()
+  }
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `500 18px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillText('COMPARATIVA', 30, HEADER_H * 0.32)
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = theme.textFaint
   ctx.font = `700 18px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText('Tabla de estadísticas', 30, HEADER_H * 0.72)
 
@@ -210,10 +212,10 @@ async function drawComparativaTableSlide(ctx, sideA, sideB, tableIdA, tableIdB) 
   const areaY = HEADER_H + 70
   const areaH = DH - areaY - 30
 
-  await drawHalfTable(ctx, sideA.player, tableIdA, 0, halfW, areaY, areaH)
-  await drawHalfTable(ctx, sideB.player, tableIdB, halfW, halfW, areaY, areaH)
+  await drawHalfTable(ctx, sideA.player, tableIdA, 0, halfW, areaY, areaH, theme)
+  await drawHalfTable(ctx, sideB.player, tableIdB, halfW, halfW, areaY, areaH, theme)
 
-  ctx.strokeStyle = '#ddd'
+  ctx.strokeStyle = theme.divider
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(halfW, HEADER_H + 20)
@@ -221,25 +223,27 @@ async function drawComparativaTableSlide(ctx, sideA, sideB, tableIdA, tableIdB) 
   ctx.stroke()
 }
 
-async function drawComparativaStatsSlide(ctx, sideA, sideB, pageLabel, chartIdsA, chartIdsB) {
+async function drawComparativaStatsSlide(ctx, sideA, sideB, pageLabel, chartIdsA, chartIdsB, theme) {
   const HEADER_H = 90
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = theme.pageBg
   ctx.fillRect(0, 0, DW, DH)
-  ctx.strokeStyle = '#e2e2e2'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(0, HEADER_H - 2)
-  ctx.lineTo(DW, HEADER_H - 2)
-  ctx.stroke()
+  if (theme.headerLine !== 'transparent') {
+    ctx.strokeStyle = theme.headerLine
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(0, HEADER_H - 2)
+    ctx.lineTo(DW, HEADER_H - 2)
+    ctx.stroke()
+  }
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `500 18px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillText('COMPARATIVA', 30, HEADER_H * 0.32)
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = theme.textFaint
   ctx.font = `700 18px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(pageLabel, 30, HEADER_H * 0.72)
 
@@ -247,10 +251,10 @@ async function drawComparativaStatsSlide(ctx, sideA, sideB, pageLabel, chartIdsA
   const areaY = HEADER_H + 70
   const areaH = DH - areaY - 30
 
-  await drawHalfStatsGrid(ctx, sideA.player, chartIdsA, 0, halfW, areaY, areaH)
-  await drawHalfStatsGrid(ctx, sideB.player, chartIdsB, halfW, halfW, areaY, areaH)
+  await drawHalfStatsGrid(ctx, sideA.player, chartIdsA, 0, halfW, areaY, areaH, theme)
+  await drawHalfStatsGrid(ctx, sideB.player, chartIdsB, halfW, halfW, areaY, areaH, theme)
 
-  ctx.strokeStyle = '#ddd'
+  ctx.strokeStyle = theme.divider
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(halfW, HEADER_H + 20)
@@ -258,9 +262,10 @@ async function drawComparativaStatsSlide(ctx, sideA, sideB, pageLabel, chartIdsA
   ctx.stroke()
 }
 
-export async function generateComparativaPDF(sideA, sideB, onProgress) {
+export async function generateComparativaPDF(sideA, sideB, onProgress, themeMode = 'dark') {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [W, H], compress: true })
+  const theme = getTheme(themeMode)
 
   const chartIdsA = Array.from({ length: sideA.statCount }, (_, i) => `pdf-cmp-A-chart-${i}`)
   const chartIdsB = Array.from({ length: sideB.statCount }, (_, i) => `pdf-cmp-B-chart-${i}`)
@@ -279,16 +284,17 @@ export async function generateComparativaPDF(sideA, sideB, onProgress) {
     ctx.scale(W / DW, H / DH)
 
     if (si === 0) {
-      await drawComparativaCover(ctx, sideA, sideB)
+      await drawComparativaCover(ctx, sideA, sideB, theme)
     } else if (si === 1) {
-      await drawComparativaTableSlide(ctx, sideA, sideB, 'pdf-cmp-A-table', 'pdf-cmp-B-table')
+      await drawComparativaTableSlide(ctx, sideA, sideB, 'pdf-cmp-A-table', 'pdf-cmp-B-table', theme)
     } else {
       const pageIdx = si - 2
       const pageLabel = totalContentPages > 1 ? `Estadísticas ${pageIdx + 1}/${totalContentPages}` : 'Estadísticas'
       await drawComparativaStatsSlide(
         ctx, sideA, sideB, pageLabel,
         pagesA[pageIdx] || [],
-        pagesB[pageIdx] || []
+        pagesB[pageIdx] || [],
+        theme
       )
     }
 
@@ -303,10 +309,30 @@ export async function generateComparativaPDF(sideA, sideB, onProgress) {
   doc.save(`Necaxa_Comparativa_${safeA}_vs_${safeB}.pdf`)
 }
 
+function ThemeToggle({ value, onChange }) {
+  return (
+    <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+      {[['dark', 'Oscuro'], ['light', 'Claro']].map(([v, label]) => (
+        <button
+          key={v}
+          onClick={() => onChange(v)}
+          style={{
+            padding: '6px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+            fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 0.5,
+            background: value === v ? 'var(--red)' : 'var(--s2)',
+            color: value === v ? '#fff' : 'var(--gray3)',
+          }}
+        >{label}</button>
+      ))}
+    </div>
+  )
+}
+
 export default function ComparativaPDFExportButton({ sideA, sideB }) {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [msg, setMsg] = useState('')
+  const [theme, setTheme] = useState('dark')
 
   const handleExport = async () => {
     setLoading(true)
@@ -316,7 +342,7 @@ export default function ComparativaPDFExportButton({ sideA, sideB }) {
       await generateComparativaPDF(sideA, sideB, (pct, message) => {
         setProgress(pct)
         setMsg(message)
-      })
+      }, theme)
     } catch (e) {
       console.error('PDF error:', e)
       setMsg('Error — revisa la consola')
@@ -335,6 +361,7 @@ export default function ComparativaPDFExportButton({ sideA, sideB }) {
           <span style={{ fontSize: 11, color: 'var(--gray)', letterSpacing: 1, whiteSpace: 'nowrap' }}>{msg}</span>
         </div>
       )}
+      <ThemeToggle value={theme} onChange={setTheme} />
       <button
         onClick={handleExport}
         disabled={loading}

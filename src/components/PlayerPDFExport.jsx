@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { loadImage, captureChart, roundRect, W, H, DW, DH } from './PDFExport'
+import { loadImage, captureChart, roundRect, getTheme, W, H, DW, DH } from './PDFExport'
 import { getPlayerPhoto } from '../utils/playerPhotos'
 
 function buildJornadaRange(jornadaLabel) {
@@ -13,8 +13,8 @@ function buildJornadaRange(jornadaLabel) {
 }
 
 // ── Slide 1: portada del jugador ────────────────────────────────────────
-async function drawPlayerCover(ctx, player, jornadaRange) {
-  ctx.fillStyle = '#ffffff'
+async function drawPlayerCover(ctx, player, jornadaRange, theme) {
+  ctx.fillStyle = theme.pageBg
   ctx.fillRect(0, 0, DW, DH)
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, DH - 6, DW, 6)
@@ -58,11 +58,11 @@ async function drawPlayerCover(ctx, player, jornadaRange) {
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
 
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `600 26px "Barlow", sans-serif`
   ctx.fillText('NECAXA — INFORME INDIVIDUAL', tx, cy - 130)
 
-  ctx.fillStyle = '#151515'
+  ctx.fillStyle = theme.textTitle
   ctx.font = `900 88px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), tx, cy - 30)
 
@@ -70,38 +70,40 @@ async function drawPlayerCover(ctx, player, jornadaRange) {
   ctx.font = `700 40px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText((player.pos || '').toUpperCase(), tx, cy + 30)
 
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = theme.textFaint
   ctx.font = `500 26px "Barlow", sans-serif`
   ctx.fillText(`Jornada${jornadaRange.includes(',') || jornadaRange.includes('-') ? 's' : ''} ${jornadaRange}  ·  ${player.mins}' jugados  ·  ${player.pct}% del partido`, tx, cy + 90)
 }
 
 // ── Slides de contenido: grid de gráficas capturadas ────────────────────
 // ── Slide 2: tabla de estadísticas ──────────────────────────────────────
-async function drawPlayerTableSlide(ctx, player, pageLabel, tableId) {
+async function drawPlayerTableSlide(ctx, player, pageLabel, tableId, theme) {
   const PAD = 36, HEADER_H = 100
 
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = theme.pageBg
   ctx.fillRect(0, 0, DW, DH)
-  ctx.strokeStyle = '#e2e2e2'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(0, HEADER_H - 2)
-  ctx.lineTo(DW, HEADER_H - 2)
-  ctx.stroke()
+  if (theme.headerLine !== 'transparent') {
+    ctx.strokeStyle = theme.headerLine
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(0, HEADER_H - 2)
+    ctx.lineTo(DW, HEADER_H - 2)
+    ctx.stroke()
+  }
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
   ctx.textBaseline = 'middle'
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `500 20px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.fillText('RENDIMIENTO INDIVIDUAL', PAD, HEADER_H * 0.32)
 
-  ctx.fillStyle = '#1a1a1a'
+  ctx.fillStyle = theme.textTitle
   ctx.font = `900 46px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), PAD, HEADER_H * 0.72)
 
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = theme.textFaint
   ctx.font = `700 20px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.textAlign = 'right'
   ctx.fillText(pageLabel, DW - PAD, HEADER_H * 0.72)
@@ -120,7 +122,7 @@ async function drawPlayerTableSlide(ctx, player, pageLabel, tableId) {
       const dh = img.naturalHeight * scale
       const dx = PAD + (areaW - dw) / 2
       const dy = areaY
-      ctx.fillStyle = '#1c1c1c'
+      ctx.fillStyle = theme.cardBg
       roundRect(ctx, dx - 8, dy - 8, dw + 16, dh + 16, 6)
       ctx.fill()
       ctx.drawImage(img, dx, dy, dw, dh)
@@ -133,36 +135,38 @@ async function drawPlayerTableSlide(ctx, player, pageLabel, tableId) {
   ctx.fillText('Sin datos de tabla', DW / 2, areaY + areaH / 2)
 }
 
-async function drawPlayerStatsSlide(ctx, player, pageLabel, chartIds) {
+async function drawPlayerStatsSlide(ctx, player, pageLabel, chartIds, theme) {
   const PAD = 36, HEADER_H = 100, CELL_GAP = 16, CARD_PAD = 10
 
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = theme.pageBg
   ctx.fillRect(0, 0, DW, DH)
-  ctx.strokeStyle = '#e2e2e2'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(0, HEADER_H - 2)
-  ctx.lineTo(DW, HEADER_H - 2)
-  ctx.stroke()
+  if (theme.headerLine !== 'transparent') {
+    ctx.strokeStyle = theme.headerLine
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(0, HEADER_H - 2)
+    ctx.lineTo(DW, HEADER_H - 2)
+    ctx.stroke()
+  }
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
   ctx.textBaseline = 'middle'
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = theme.textMuted
   ctx.font = `500 20px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.fillText('RENDIMIENTO INDIVIDUAL', PAD, HEADER_H * 0.32)
 
-  ctx.fillStyle = '#1a1a1a'
+  ctx.fillStyle = theme.textTitle
   ctx.font = `900 46px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), PAD, HEADER_H * 0.72)
 
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = theme.textFaint
   ctx.font = `500 18px "Barlow", sans-serif`
   ctx.textAlign = 'right'
   ctx.fillText((player.pos || '').toUpperCase(), DW - PAD, HEADER_H * 0.32)
 
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = theme.textFaint
   ctx.font = `700 20px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(pageLabel, DW - PAD, HEADER_H * 0.72)
 
@@ -190,10 +194,10 @@ async function drawPlayerStatsSlide(ctx, player, pageLabel, chartIds) {
     const x = PAD + col * (cellW + CELL_GAP)
     const y = areaY + row * (cellH + CELL_GAP)
 
-    ctx.fillStyle = '#1c1c1c'
+    ctx.fillStyle = theme.cardBg
     roundRect(ctx, x, y, cellW, cellH, 6)
     ctx.fill()
-    ctx.strokeStyle = '#2a2a2a'
+    ctx.strokeStyle = theme.cardBorder
     ctx.lineWidth = 1
     ctx.stroke()
 
@@ -204,7 +208,7 @@ async function drawPlayerStatsSlide(ctx, player, pageLabel, chartIds) {
       ctx.drawImage(img, x + CARD_PAD, y + CARD_PAD, cellW - CARD_PAD * 2, cellH - CARD_PAD * 2)
       ctx.restore()
     } else {
-      ctx.fillStyle = '#252525'
+      ctx.fillStyle = theme.cardEmptyBg
       roundRect(ctx, x + CARD_PAD, y + CARD_PAD, cellW - CARD_PAD * 2, cellH - CARD_PAD * 2, 4)
       ctx.fill()
       ctx.fillStyle = '#444'
@@ -222,9 +226,10 @@ function chunk(arr, size) {
   return out
 }
 
-export async function generatePlayerPDF(player, jornadaLabel, statCount, onProgress) {
+export async function generatePlayerPDF(player, jornadaLabel, statCount, onProgress, themeMode = 'dark') {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [W, H], compress: true })
+  const theme = getTheme(themeMode)
 
   const jornadaRange = buildJornadaRange(jornadaLabel)
   const chartIds = Array.from({ length: statCount }, (_, i) => `pdf-player-chart-${i}`)
@@ -242,15 +247,15 @@ export async function generatePlayerPDF(player, jornadaLabel, statCount, onProgr
     ctx.scale(W / DW, H / DH)
 
     if (si === 0) {
-      await drawPlayerCover(ctx, player, jornadaRange)
+      await drawPlayerCover(ctx, player, jornadaRange, theme)
     } else if (si === 1) {
-      await drawPlayerTableSlide(ctx, player, 'Tabla de estadísticas', 'pdf-player-table')
+      await drawPlayerTableSlide(ctx, player, 'Tabla de estadísticas', 'pdf-player-table', theme)
     } else {
       const pageIdx = si - 2
       const pageLabel = pages.length > 1
         ? `Estadísticas ${pageIdx + 1}/${pages.length}`
         : 'Estadísticas'
-      await drawPlayerStatsSlide(ctx, player, pageLabel, pages[pageIdx])
+      await drawPlayerStatsSlide(ctx, player, pageLabel, pages[pageIdx], theme)
     }
 
     const imgData = canvas.toDataURL('image/png')
@@ -263,11 +268,31 @@ export async function generatePlayerPDF(player, jornadaLabel, statCount, onProgr
   doc.save(`Necaxa_${safeName}_${jornadaRange.replace(/[\s,]/g, '_')}.pdf`)
 }
 
+function ThemeToggle({ value, onChange }) {
+  return (
+    <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+      {[['dark', 'Oscuro'], ['light', 'Claro']].map(([v, label]) => (
+        <button
+          key={v}
+          onClick={() => onChange(v)}
+          style={{
+            padding: '6px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+            fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 0.5,
+            background: value === v ? 'var(--red)' : 'var(--s2)',
+            color: value === v ? '#fff' : 'var(--gray3)',
+          }}
+        >{label}</button>
+      ))}
+    </div>
+  )
+}
+
 // ── Botón de exportación ────────────────────────────────────────────────
 export default function PlayerPDFExportButton({ player, jornadaLabel, statCount }) {
   const [loading,  setLoading]  = useState(false)
   const [progress, setProgress] = useState(0)
   const [msg,      setMsg]      = useState('')
+  const [theme,    setTheme]    = useState('dark')
 
   const handleExport = async () => {
     setLoading(true)
@@ -277,7 +302,7 @@ export default function PlayerPDFExportButton({ player, jornadaLabel, statCount 
       await generatePlayerPDF(player, jornadaLabel, statCount, (pct, message) => {
         setProgress(pct)
         setMsg(message)
-      })
+      }, theme)
     } catch (e) {
       console.error('PDF error:', e)
       setMsg('Error — revisa la consola')
@@ -299,6 +324,7 @@ export default function PlayerPDFExportButton({ player, jornadaLabel, statCount 
           <span style={{ fontSize: 11, color: 'var(--gray)', letterSpacing: 1, whiteSpace: 'nowrap' }}>{msg}</span>
         </div>
       )}
+      <ThemeToggle value={theme} onChange={setTheme} />
       <button
         onClick={handleExport}
         disabled={loading}
