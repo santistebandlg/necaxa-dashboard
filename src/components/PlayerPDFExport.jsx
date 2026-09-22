@@ -14,7 +14,7 @@ function buildJornadaRange(jornadaLabel) {
 
 // ── Slide 1: portada del jugador ────────────────────────────────────────
 async function drawPlayerCover(ctx, player, jornadaRange) {
-  ctx.fillStyle = '#0d0d0d'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, DH)
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, DH - 6, DW, 6)
@@ -58,11 +58,11 @@ async function drawPlayerCover(ctx, player, jornadaRange) {
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
 
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = '#888'
   ctx.font = `600 26px "Barlow", sans-serif`
   ctx.fillText('NECAXA — INFORME INDIVIDUAL', tx, cy - 130)
 
-  ctx.fillStyle = '#f5f5f5'
+  ctx.fillStyle = '#151515'
   ctx.font = `900 88px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), tx, cy - 30)
 
@@ -70,7 +70,7 @@ async function drawPlayerCover(ctx, player, jornadaRange) {
   ctx.font = `700 40px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText((player.pos || '').toUpperCase(), tx, cy + 30)
 
-  ctx.fillStyle = '#999'
+  ctx.fillStyle = '#666'
   ctx.font = `500 26px "Barlow", sans-serif`
   ctx.fillText(`Jornada${jornadaRange.includes(',') || jornadaRange.includes('-') ? 's' : ''} ${jornadaRange}  ·  ${player.mins}' jugados  ·  ${player.pct}% del partido`, tx, cy + 90)
 }
@@ -80,24 +80,28 @@ async function drawPlayerCover(ctx, player, jornadaRange) {
 async function drawPlayerTableSlide(ctx, player, pageLabel, tableId) {
   const PAD = 36, HEADER_H = 100
 
-  ctx.fillStyle = '#131313'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, DH)
-  ctx.fillStyle = '#0d0d0d'
-  ctx.fillRect(0, 0, DW, HEADER_H)
+  ctx.strokeStyle = '#e2e2e2'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(0, HEADER_H - 2)
+  ctx.lineTo(DW, HEADER_H - 2)
+  ctx.stroke()
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
   ctx.textBaseline = 'middle'
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = '#888'
   ctx.font = `500 20px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.fillText('RENDIMIENTO INDIVIDUAL', PAD, HEADER_H * 0.32)
 
-  ctx.fillStyle = '#f0f0f0'
+  ctx.fillStyle = '#1a1a1a'
   ctx.font = `900 46px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), PAD, HEADER_H * 0.72)
 
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = '#444'
   ctx.font = `700 20px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.textAlign = 'right'
   ctx.fillText(pageLabel, DW - PAD, HEADER_H * 0.72)
@@ -132,29 +136,33 @@ async function drawPlayerTableSlide(ctx, player, pageLabel, tableId) {
 async function drawPlayerStatsSlide(ctx, player, pageLabel, chartIds) {
   const PAD = 36, HEADER_H = 100, CELL_GAP = 16, CARD_PAD = 10
 
-  ctx.fillStyle = '#131313'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, DH)
-  ctx.fillStyle = '#0d0d0d'
-  ctx.fillRect(0, 0, DW, HEADER_H)
+  ctx.strokeStyle = '#e2e2e2'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(0, HEADER_H - 2)
+  ctx.lineTo(DW, HEADER_H - 2)
+  ctx.stroke()
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
   ctx.textBaseline = 'middle'
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = '#888'
   ctx.font = `500 20px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.fillText('RENDIMIENTO INDIVIDUAL', PAD, HEADER_H * 0.32)
 
-  ctx.fillStyle = '#f0f0f0'
+  ctx.fillStyle = '#1a1a1a'
   ctx.font = `900 46px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), PAD, HEADER_H * 0.72)
 
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = '#666'
   ctx.font = `500 18px "Barlow", sans-serif`
   ctx.textAlign = 'right'
   ctx.fillText((player.pos || '').toUpperCase(), DW - PAD, HEADER_H * 0.32)
 
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = '#444'
   ctx.font = `700 20px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(pageLabel, DW - PAD, HEADER_H * 0.72)
 

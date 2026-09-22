@@ -47,11 +47,11 @@ async function drawHalfCover(ctx, player, rangeLabel, x0, halfW) {
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
 
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = '#888'
   ctx.font = `600 22px "Barlow", sans-serif`
   ctx.fillText('NECAXA — COMPARATIVA', tx, cy - 110)
 
-  ctx.fillStyle = '#f5f5f5'
+  ctx.fillStyle = '#151515'
   ctx.font = `900 64px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), tx, cy - 30, halfW - 460)
 
@@ -59,7 +59,7 @@ async function drawHalfCover(ctx, player, rangeLabel, x0, halfW) {
   ctx.font = `700 32px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText((player.pos || '').toUpperCase(), tx, cy + 18)
 
-  ctx.fillStyle = '#999'
+  ctx.fillStyle = '#666'
   ctx.font = `500 22px "Barlow", sans-serif`
   ctx.fillText(rangeLabel, tx, cy + 68, halfW - 460)
   ctx.fillText(`${player.mins}' jugados · ${player.pct}% del partido`, tx, cy + 100, halfW - 460)
@@ -67,7 +67,7 @@ async function drawHalfCover(ctx, player, rangeLabel, x0, halfW) {
 
 async function drawComparativaCover(ctx, sideA, sideB) {
   const halfW = DW / 2
-  ctx.fillStyle = '#0d0d0d'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, DH)
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, DH - 6, DW, 6)
@@ -75,14 +75,13 @@ async function drawComparativaCover(ctx, sideA, sideB) {
   await drawHalfCover(ctx, sideA.player, sideA.rangeLabel, 0, halfW)
   await drawHalfCover(ctx, sideB.player, sideB.rangeLabel, halfW, halfW)
 
-  ctx.strokeStyle = '#2a2a2a'
+  ctx.strokeStyle = '#ddd'
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(halfW, 60)
   ctx.lineTo(halfW, DH - 60)
   ctx.stroke()
 
-  ctx.fillStyle = '#444'
   ctx.font = `900 22px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -90,7 +89,7 @@ async function drawComparativaCover(ctx, sideA, sideB) {
   ctx.beginPath()
   ctx.arc(halfW, DH / 2, 26, 0, Math.PI * 2)
   ctx.fill()
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = '#ccc'
   ctx.fillText('VS', halfW, DH / 2)
 }
 
@@ -99,7 +98,7 @@ async function drawHalfStatsGrid(ctx, player, chartIds, x0, halfW, areaY, areaH)
 
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = '#f0f0f0'
+  ctx.fillStyle = '#151515'
   ctx.font = `900 32px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), x0 + PAD, areaY - 14)
   ctx.fillStyle = '#888'
@@ -156,7 +155,7 @@ async function drawHalfTable(ctx, player, tableId, x0, halfW, areaY, areaH) {
   const PAD = 24
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = '#f0f0f0'
+  ctx.fillStyle = '#151515'
   ctx.font = `900 32px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(player.name.toUpperCase(), x0 + PAD, areaY - 14)
 
@@ -187,19 +186,23 @@ async function drawHalfTable(ctx, player, tableId, x0, halfW, areaY, areaH) {
 
 async function drawComparativaTableSlide(ctx, sideA, sideB, tableIdA, tableIdB) {
   const HEADER_H = 90
-  ctx.fillStyle = '#131313'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, DH)
-  ctx.fillStyle = '#0d0d0d'
-  ctx.fillRect(0, 0, DW, HEADER_H)
+  ctx.strokeStyle = '#e2e2e2'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(0, HEADER_H - 2)
+  ctx.lineTo(DW, HEADER_H - 2)
+  ctx.stroke()
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = '#888'
   ctx.font = `500 18px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillText('COMPARATIVA', 30, HEADER_H * 0.32)
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = '#444'
   ctx.font = `700 18px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText('Tabla de estadísticas', 30, HEADER_H * 0.72)
 
@@ -210,7 +213,7 @@ async function drawComparativaTableSlide(ctx, sideA, sideB, tableIdA, tableIdB) 
   await drawHalfTable(ctx, sideA.player, tableIdA, 0, halfW, areaY, areaH)
   await drawHalfTable(ctx, sideB.player, tableIdB, halfW, halfW, areaY, areaH)
 
-  ctx.strokeStyle = '#2a2a2a'
+  ctx.strokeStyle = '#ddd'
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(halfW, HEADER_H + 20)
@@ -220,19 +223,23 @@ async function drawComparativaTableSlide(ctx, sideA, sideB, tableIdA, tableIdB) 
 
 async function drawComparativaStatsSlide(ctx, sideA, sideB, pageLabel, chartIdsA, chartIdsB) {
   const HEADER_H = 90
-  ctx.fillStyle = '#131313'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, DH)
-  ctx.fillStyle = '#0d0d0d'
-  ctx.fillRect(0, 0, DW, HEADER_H)
+  ctx.strokeStyle = '#e2e2e2'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(0, HEADER_H - 2)
+  ctx.lineTo(DW, HEADER_H - 2)
+  ctx.stroke()
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = '#888'
   ctx.font = `500 18px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillText('COMPARATIVA', 30, HEADER_H * 0.32)
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = '#444'
   ctx.font = `700 18px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(pageLabel, 30, HEADER_H * 0.72)
 
@@ -243,7 +250,7 @@ async function drawComparativaStatsSlide(ctx, sideA, sideB, pageLabel, chartIdsA
   await drawHalfStatsGrid(ctx, sideA.player, chartIdsA, 0, halfW, areaY, areaH)
   await drawHalfStatsGrid(ctx, sideB.player, chartIdsB, halfW, halfW, areaY, areaH)
 
-  ctx.strokeStyle = '#2a2a2a'
+  ctx.strokeStyle = '#ddd'
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(halfW, HEADER_H + 20)

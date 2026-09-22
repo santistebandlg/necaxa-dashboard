@@ -108,36 +108,42 @@ async function drawContentSlide(ctx, title, jornadaText, chartIds, layout) {
   const CELL_GAP = 16
   const CARD_PAD = 10
 
-  ctx.fillStyle = '#131313'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, DH)
 
   // Header bar
-  ctx.fillStyle = '#0d0d0d'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, HEADER_H)
+  ctx.strokeStyle = '#e2e2e2'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(0, HEADER_H - 2)
+  ctx.lineTo(DW, HEADER_H - 2)
+  ctx.stroke()
   ctx.fillStyle = '#c81a1a'
   ctx.fillRect(0, HEADER_H - 3, DW, 3)
 
   ctx.textBaseline = 'middle'
 
   // Left: section type
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = '#888'
   ctx.font = `500 20px "Barlow", sans-serif`
   ctx.textAlign = 'left'
   ctx.fillText('RENDIMIENTO', PAD, HEADER_H * 0.32)
 
   // Left: title
-  ctx.fillStyle = '#f0f0f0'
+  ctx.fillStyle = '#1a1a1a'
   ctx.font = `900 50px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(title.toUpperCase(), PAD, HEADER_H * 0.72)
 
   // Right: últimos partidos
-  ctx.fillStyle = '#444'
+  ctx.fillStyle = '#888'
   ctx.font = `500 18px "Barlow", sans-serif`
   ctx.textAlign = 'right'
   ctx.fillText('ÚLTIMOS 5 PARTIDOS', DW - PAD, HEADER_H * 0.32)
 
   // Right: jornada label
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = '#444'
   ctx.font = `700 22px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(jornadaText, DW - PAD, HEADER_H * 0.72)
 

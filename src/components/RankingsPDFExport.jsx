@@ -5,6 +5,7 @@ import { jKey, formatJornadaLabels, sortJornadaKeysByDate } from '../hooks/useSh
 import { loadImage, roundRect } from './PDFExport'
 
 const NECAXA = 'Necaxa'
+const GRID_LIGHT = { color: 'rgba(0,0,0,0.08)' }
 const CREST_URL = 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Club_Necaxa_Logo.svg'
 const W = 2560, H = 1440 // resolución de salida
 const DW = 1920, DH = 1080 // sistema de coordenadas de diseño
@@ -88,7 +89,7 @@ function chartToImage(config, width, height) {
 
 async function rankingBarImage(aggregated, compareTeam, width, height) {
   const colors = aggregated.map(t =>
-    t.equipo === NECAXA ? RED : (compareTeam && t.equipo === compareTeam ? GOLD : 'rgba(255,255,255,0.18)')
+    t.equipo === NECAXA ? RED : (compareTeam && t.equipo === compareTeam ? GOLD : 'rgba(0,0,0,0.18)')
   )
   const url = await chartToImage({
     type: 'bar',
@@ -100,9 +101,9 @@ async function rankingBarImage(aggregated, compareTeam, width, height) {
       indexAxis: 'y', maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: GRID, beginAtZero: true, ticks: { color: '#888', font: { size: 20 } } },
+        x: { grid: GRID_LIGHT, beginAtZero: true, ticks: { color: '#555', font: { size: 20 } } },
         y: { grid: { display: false }, ticks: {
-          color: (ctx) => aggregated[ctx.index]?.equipo === NECAXA ? '#fff' : (compareTeam && aggregated[ctx.index]?.equipo === compareTeam ? GOLD : '#888'),
+          color: (ctx) => aggregated[ctx.index]?.equipo === NECAXA ? '#151515' : (compareTeam && aggregated[ctx.index]?.equipo === compareTeam ? '#8a6d10' : '#555'),
           font: { size: 20 },
         } },
       },
@@ -119,8 +120,8 @@ async function evoImages(evo, evoColor, width, height) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: GRID, ticks: { color: '#888', font: { size: 18 } } },
-        y: { grid: GRID, beginAtZero: true, ticks: { color: '#888', font: { size: 18 } } },
+        x: { grid: GRID_LIGHT, ticks: { color: '#555', font: { size: 18 } } },
+        y: { grid: GRID_LIGHT, beginAtZero: true, ticks: { color: '#555', font: { size: 18 } } },
       },
     },
   }, width, height)
@@ -137,8 +138,8 @@ async function evoImages(evo, evoColor, width, height) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: GRID, ticks: { color: '#888', font: { size: 18 } } },
-        y: { grid: GRID, reverse: true, min: 1, ticks: { stepSize: 1, color: '#888', font: { size: 18 } } },
+        x: { grid: GRID_LIGHT, ticks: { color: '#555', font: { size: 18 } } },
+        y: { grid: GRID_LIGHT, reverse: true, min: 1, ticks: { stepSize: 1, color: '#555', font: { size: 18 } } },
       },
     },
   }, width, height)
@@ -153,12 +154,12 @@ async function drawMetricPage(ctx, crestImg, params) {
   } = params
   const PAD = 40
 
-  ctx.fillStyle = '#0d0d0d'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, DH)
 
   // Header
   ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = '#666'
   ctx.font = `700 20px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.textAlign = 'left'
   ctx.fillText('PRE PARTIDO', PAD, 40)
@@ -166,10 +167,10 @@ async function drawMetricPage(ctx, crestImg, params) {
   ctx.fillText('RANKINGS', DW - PAD, 40)
   if (evo?.missingDisplay?.length) {
     ctx.font = `italic 600 18px "Barlow", sans-serif`
-    ctx.fillStyle = '#ccc'
+    ctx.fillStyle = '#777'
     ctx.fillText(`*No se cuenta con datos de la ${evo.missingDisplay.join(', ')}*`, DW - PAD, 76)
   }
-  ctx.strokeStyle = '#333'
+  ctx.strokeStyle = '#ddd'
   ctx.lineWidth = 1
   ctx.beginPath()
   ctx.moveTo(PAD, 56)
@@ -177,10 +178,10 @@ async function drawMetricPage(ctx, crestImg, params) {
   ctx.stroke()
 
   ctx.textAlign = 'left'
-  ctx.fillStyle = '#f0f0f0'
+  ctx.fillStyle = '#151515'
   ctx.font = `900 52px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(metric.toUpperCase(), PAD, 130)
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = '#666'
   ctx.font = `600 22px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText(jornadaLabel, PAD, 162)
 
@@ -198,21 +199,21 @@ async function drawMetricPage(ctx, crestImg, params) {
     roundRect(ctx, x, badgeY, 330, badgeH, 4)
     ctx.stroke()
     ctx.textAlign = 'left'
-    ctx.fillStyle = '#999'
+    ctx.fillStyle = '#777'
     ctx.font = `600 13px "Barlow Condensed", "Arial Narrow", sans-serif`
     ctx.fillText(`RANKING ${teamLabel.toUpperCase()}`, x + 16, badgeY + 22)
-    ctx.fillStyle = '#fff'
+    ctx.fillStyle = '#151515'
     ctx.font = `900 30px "Barlow Condensed", "Arial Narrow", sans-serif`
     ctx.fillText(`#${rank}`, x + 16, badgeY + 54)
     ctx.font = `500 14px "Barlow", sans-serif`
-    ctx.fillStyle = '#999'
+    ctx.fillStyle = '#777'
     ctx.fillText(`de ${aggregated.length}`, x + 16 + ctx.measureText(`#${rank}`).width + 8, badgeY + 54)
-    ctx.strokeStyle = '#333'
+    ctx.strokeStyle = '#ddd'
     ctx.beginPath()
     ctx.moveTo(x + 170, badgeY + 12)
     ctx.lineTo(x + 170, badgeY + 58)
     ctx.stroke()
-    ctx.fillStyle = '#999'
+    ctx.fillStyle = '#777'
     ctx.font = `600 13px "Barlow Condensed", "Arial Narrow", sans-serif`
     const metricShort = metric.length > 22 ? metric.slice(0, 20) + '…' : metric
     ctx.fillText(metricShort.toUpperCase(), x + 186, badgeY + 22)
@@ -232,12 +233,12 @@ async function drawMetricPage(ctx, crestImg, params) {
   if (includeTable) {
     const rowH = 27
     const headerH = 32
-    ctx.strokeStyle = '#2a2a2a'
+    ctx.strokeStyle = '#ddd'
     ctx.lineWidth = 1
     ctx.strokeRect(PAD, contentY, leftW, headerH + aggregated.length * rowH)
-    ctx.fillStyle = '#161616'
+    ctx.fillStyle = '#f2f2f2'
     ctx.fillRect(PAD, contentY, leftW, headerH)
-    ctx.fillStyle = '#888'
+    ctx.fillStyle = '#555'
     ctx.font = `600 11px "Barlow Condensed", "Arial Narrow", sans-serif`
     ctx.textAlign = 'left'
     ctx.fillText('#', PAD + 14, contentY + 20)
@@ -250,16 +251,16 @@ async function drawMetricPage(ctx, crestImg, params) {
       const isC = compareTeam && t.equipo === compareTeam
       if (isN) { ctx.fillStyle = 'rgba(200,26,26,0.16)'; ctx.fillRect(PAD, y, leftW, rowH) }
       else if (isC) { ctx.fillStyle = 'rgba(232,184,50,0.14)'; ctx.fillRect(PAD, y, leftW, rowH) }
-      else if (idx % 2 === 1) { ctx.fillStyle = 'rgba(255,255,255,0.02)'; ctx.fillRect(PAD, y, leftW, rowH) }
+      else if (idx % 2 === 1) { ctx.fillStyle = 'rgba(0,0,0,0.03)'; ctx.fillRect(PAD, y, leftW, rowH) }
       ctx.textAlign = 'left'
-      ctx.fillStyle = '#777'
+      ctx.fillStyle = '#999'
       ctx.font = `500 13px "Barlow", sans-serif`
       ctx.fillText(String(idx + 1), PAD + 14, y + 19)
-      ctx.fillStyle = isN ? '#fff' : isC ? GOLD : '#ccc'
+      ctx.fillStyle = isN ? '#151515' : isC ? '#8a6d10' : '#333'
       ctx.font = `${isN || isC ? '700' : '400'} 13px "Barlow", sans-serif`
       ctx.fillText(t.equipo, PAD + 50, y + 19)
       ctx.textAlign = 'right'
-      ctx.fillStyle = isN ? RED : isC ? GOLD : '#eee'
+      ctx.fillStyle = isN ? RED : isC ? '#8a6d10' : '#222'
       ctx.font = `700 14px "Barlow", sans-serif`
       ctx.fillText(t.value.toFixed(2), PAD + leftW - 14, y + 19)
     })
@@ -272,9 +273,12 @@ async function drawMetricPage(ctx, crestImg, params) {
       const chartH = includeEvo ? 560 : (headerHeightFor(aggregated.length))
       const img = await loadImage(await rankingBarImage(aggregated, compareTeam, rightW * (W / DW), chartH * (W / DW))).catch(() => null)
       if (img) {
-        ctx.fillStyle = '#131313'
+        ctx.fillStyle = '#fafafa'
         roundRect(ctx, rightX, cy, rightW, chartH, 4)
         ctx.fill()
+        ctx.strokeStyle = '#eee'
+        ctx.lineWidth = 1
+        ctx.stroke()
         ctx.drawImage(img, rightX, cy, rightW, chartH)
       }
       cy += chartH + 20
@@ -286,10 +290,13 @@ async function drawMetricPage(ctx, crestImg, params) {
       const titles = [`VALOR ${evoTeam.toUpperCase()} POR JORNADA`, `POSICIÓN DE ${evoTeam.toUpperCase()} POR JORNADA`]
       for (const [i, src] of [valUrl, rankUrl].entries()) {
         const x = rightX + i * (halfW + 16)
-        ctx.fillStyle = '#131313'
+        ctx.fillStyle = '#fafafa'
         roundRect(ctx, x, cy, halfW, evoH, 4)
         ctx.fill()
-        ctx.fillStyle = '#888'
+        ctx.strokeStyle = '#eee'
+        ctx.lineWidth = 1
+        ctx.stroke()
+        ctx.fillStyle = '#555'
         ctx.font = `600 12px "Barlow Condensed", "Arial Narrow", sans-serif`
         ctx.textAlign = 'left'
         ctx.fillText(titles[i], x + 10, cy + 18)
@@ -304,13 +311,13 @@ function headerHeightFor(n) { return Math.min(760, Math.max(400, n * 26)) }
 
 // ── Carátula ──────────────────────────────────────────────────────────
 function drawRankingsCover(ctx, crestImg) {
-  ctx.fillStyle = '#161616'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, DW, DH)
 
   if (crestImg) {
     ctx.save()
     ctx.globalAlpha = 0.5
-    ctx.filter = 'grayscale(1) brightness(0.55)'
+    ctx.filter = 'grayscale(1) brightness(1.7) contrast(0.7)'
     const h = DH * 1.35
     const w = h * (crestImg.naturalWidth / crestImg.naturalHeight)
     ctx.drawImage(crestImg, -w * 0.22, DH * 0.5 - h / 2, w, h)
@@ -320,20 +327,20 @@ function drawRankingsCover(ctx, crestImg) {
   const tx = DW * 0.555, ty = DH * 0.47
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = '#9a9a9a'
+  ctx.fillStyle = '#8a8a8a'
   ctx.font = `800 68px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText('INFORME', tx, ty)
 
-  ctx.strokeStyle = '#555'
+  ctx.strokeStyle = '#ccc'
   ctx.lineWidth = 1.5
   ctx.beginPath()
   ctx.moveTo(tx + 3, ty + 22)
   ctx.lineTo(DW - 140, ty + 22)
   ctx.stroke()
 
-  ctx.fillStyle = '#888'
+  ctx.fillStyle = '#c81a1a'
   ctx.fillRect(tx + 3, ty + 40, 3, 38)
-  ctx.fillStyle = '#eee'
+  ctx.fillStyle = '#1a1a1a'
   ctx.font = `700 32px "Barlow Condensed", "Arial Narrow", sans-serif`
   ctx.fillText('PRE PARTIDO', tx + 22, ty + 68)
 }
