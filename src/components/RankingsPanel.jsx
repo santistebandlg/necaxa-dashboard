@@ -86,6 +86,9 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
   }, [aggregated, sortDir])
 
   // ── Vista por jornada ──────────────────────────────────────
+  const evoTeam  = compareTeam || NECAXA
+  const evoColor = compareTeam ? GOLD : RED
+
   const jornadaData = useMemo(() => {
     if (!showJornada) return null
     const filteredRows = rows.filter(r => (!activeTorneos?.length || activeTorneos.includes(r.torneo)))
@@ -95,23 +98,19 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
     )
     const filtered = labels?.length ? jornadas.filter(j => labels.includes(j)) : jornadas
     const allTeams = [...new Set(rows.map(r => r.equipo || r.Equipo).filter(Boolean))]
-    const valsFor = (team) => filtered.map(j => {
-      const row = rows.find(r => jKey(r.torneo, r.jornada) === j && (r.equipo === team || r.Equipo === team))
+    const teamVals = filtered.map(j => {
+      const row = rows.find(r => jKey(r.torneo, r.jornada) === j && (r.equipo === evoTeam || r.Equipo === evoTeam))
       return row ? (row[metric] || 0) : 0
     })
-    const necaxaVals = valsFor(NECAXA)
-    const compareVals = compareTeam ? valsFor(compareTeam) : null
-    const rankFor = (vals) => filtered.map((j, ji) => {
+    const rankPerJ = filtered.map((j, ji) => {
       const allVals = allTeams.map(eq => {
         const row = rows.find(r => jKey(r.torneo, r.jornada) === j && (r.equipo === eq || r.Equipo === eq))
         return row ? (row[metric] || 0) : 0
       }).sort((a, b) => b - a)
-      return allVals.indexOf(vals[ji]) + 1
+      return allVals.indexOf(teamVals[ji]) + 1
     })
-    const rankPerJ = rankFor(necaxaVals)
-    const compareRankPerJ = compareVals ? rankFor(compareVals) : null
-    return { jornadas: filtered, jornadasDisplay: formatJornadaLabels(filtered), necaxaVals, rankPerJ, compareVals, compareRankPerJ }
-  }, [showJornada, rows, labels, activeTorneos, metric, compareTeam])
+    return { jornadas: filtered, jornadasDisplay: formatJornadaLabels(filtered), teamVals, rankPerJ }
+  }, [showJornada, rows, labels, activeTorneos, metric, evoTeam])
 
   if (!metrics.length) return <div style={{ color: 'var(--gray)', fontSize: 12, padding: 24 }}>Sin datos disponibles</div>
 
@@ -296,25 +295,12 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {/* Valor por jornada */}
             <div>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Valor por jornada</div>
-              {compareTeam && (
-                <div style={{ display: 'flex', gap: 14, marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: 'var(--gray3)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: 2, background: RED, display: 'inline-block' }} />Necaxa
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--gray3)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: 2, background: GOLD, display: 'inline-block' }} />{compareTeam}
-                  </span>
-                </div>
-              )}
+              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Valor {evoTeam} por jornada</div>
               <div style={{ height: 220 }}>
                 <Bar
                   data={{
                     labels: jornadaData.jornadasDisplay,
-                    datasets: [
-                      { label: 'Necaxa', data: jornadaData.necaxaVals, backgroundColor: RED, borderRadius: 3, _barLabels: true },
-                      ...(jornadaData.compareVals ? [{ label: compareTeam, data: jornadaData.compareVals, backgroundColor: GOLD, borderRadius: 3, _barLabels: true }] : []),
-                    ],
+                    datasets: [{ label: evoTeam, data: jornadaData.teamVals, backgroundColor: evoColor, borderRadius: 3, _barLabels: true }],
                   }}
                   options={{
                     responsive: true, maintainAspectRatio: false,
@@ -326,39 +312,24 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
             </div>
             {/* Ranking por jornada */}
             <div>
-              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Posición en el ranking por jornada</div>
+              <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Posición de {evoTeam} en el ranking por jornada</div>
               <div style={{ height: 220 }}>
                 <Bar
                   data={{
                     labels: jornadaData.jornadasDisplay,
-                    datasets: [
-                      {
-                        type: 'line',
-                        label: 'Necaxa',
-                        data: jornadaData.rankPerJ,
-                        borderColor: RED,
-                        backgroundColor: 'transparent',
-                        pointBackgroundColor: RED,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        borderWidth: 2,
-                        tension: 0.3,
-                        _intLine: true,
-                      },
-                      ...(jornadaData.compareRankPerJ ? [{
-                        type: 'line',
-                        label: compareTeam,
-                        data: jornadaData.compareRankPerJ,
-                        borderColor: GOLD,
-                        backgroundColor: 'transparent',
-                        pointBackgroundColor: GOLD,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        borderWidth: 2,
-                        tension: 0.3,
-                        _intLine: true,
-                      }] : []),
-                    ],
+                    datasets: [{
+                      type: 'line',
+                      label: evoTeam,
+                      data: jornadaData.rankPerJ,
+                      borderColor: evoColor,
+                      backgroundColor: 'transparent',
+                      pointBackgroundColor: evoColor,
+                      pointRadius: 5,
+                      pointHoverRadius: 7,
+                      borderWidth: 2,
+                      tension: 0.3,
+                      _intLine: true,
+                    }],
                   }}
                   options={{
                     responsive: true, maintainAspectRatio: false,
