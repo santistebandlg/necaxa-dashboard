@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { Bar, Scatter } from 'react-chartjs-2'
 import { RED, GOLD, WHT, GRID } from '../utils/chartUtils'
 import { jKey, formatJornadaLabels, sortJornadaKeysByDate } from '../hooks/useSheetData'
+import RankingsPDFBuilder from './RankingsPDFExport'
 
 const NECAXA = 'Necaxa'
 
@@ -119,6 +120,11 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
   )
   const barH = Math.max(320, aggregated.length * 28)
 
+  const evoLabels = formatJornadaLabels(labels?.length ? labels : [])
+  const jornadaLabel = evoLabels.length === 0 ? 'LMX'
+    : evoLabels.length === 1 ? `LMX ${evoLabels[0]}`
+    : `LMX ${evoLabels[0]} – ${evoLabels[evoLabels.length - 1]}`
+
   const btnStyle = (active) => ({
     padding: '3px 12px', borderRadius: 3, border: 'none', fontSize: 11, cursor: 'pointer',
     fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: 0.5,
@@ -130,6 +136,11 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
     <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 20, marginBottom: 24 }}>
       {/* Title */}
       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--white)', marginBottom: 16 }}>{title}</div>
+
+      <RankingsPDFBuilder
+        rows={rows} labels={labels} activeTorneos={activeTorneos}
+        metrics={metrics} mode={mode} compareTeam={compareTeam} jornadaLabel={jornadaLabel}
+      />
 
       {/* Controls */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
