@@ -168,7 +168,7 @@ export async function generateTeamH2HPDF(jobs, onProgress, themeMode = 'dark') {
 }
 
 // ── UI: selector de métricas + botón ─────────────────────────────────────
-export default function TeamH2HPDFBuilder({ rows, metrics, allJornadas, torneos, teamA, torneosA, jIdxA, teamB, torneosB, jIdxB }) {
+export default function TeamH2HPDFBuilder({ rows, metrics, allJornadas, torneos, teamA, torneosA, jIdxA, aggModeA, teamB, torneosB, jIdxB, aggModeB }) {
   const [open, setOpen] = useState(false)
   const [selectedMetrics, setSelectedMetrics] = useState([])
   const [pdfTheme, setPdfTheme] = useState('dark')
@@ -188,18 +188,31 @@ export default function TeamH2HPDFBuilder({ rows, metrics, allJornadas, torneos,
     try {
       const keysA = sideSelection(allJornadas, torneos, torneosA, jIdxA)
       const keysB = sideSelection(allJornadas, torneos, torneosB, jIdxB)
-      const labelsA = formatJornadaLabels(keysA)
-      const labelsB = formatJornadaLabels(keysB)
+      const jornadaLabelsA = formatJornadaLabels(keysA)
+      const jornadaLabelsB = formatJornadaLabels(keysB)
       const rA = rangeLabel(keysA)
       const rB = rangeLabel(keysB)
-      const jobs = selectedMetrics.map(metric => ({
-        metric, teamA, teamB, rangeA: rA, rangeB: rB,
-        valueA: teamValueForPeriod(rows, keysA, torneosA, metric, teamA),
-        valueB: teamValueForPeriod(rows, keysB, torneosB, metric, teamB),
-        seriesA: teamValueByJornada(rows, keysA, torneosA, metric, teamA),
-        seriesB: teamValueByJornada(rows, keysB, torneosB, metric, teamB),
-        labelsA, labelsB,
-      }))
+      const isPromA = aggModeA === 'promedio'
+      const isPromB = aggModeB === 'promedio'
+      const jobs = selectedMetrics.map(metric => {
+        const totalA = teamValueForPeriod(rows, keysA, torneosA, metric, teamA)
+        const totalB = teamValueForPeriod(rows, keysB, torneosB, metric, teamB)
+        const rawSeriesA = teamValueByJornada(rows, keysA, torneosA, metric, teamA)
+        const rawSeriesB = teamValueByJornada(rows, keysB, torneosB, metric, teamB)
+        const avgA = keysA.length ? totalA / keysA.length : 0
+        const avgB = keysB.length ? totalB / keysB.length : 0
+        return {
+          metric, teamA, teamB,
+          rangeA: rA + (isPromA ? ' (promedio)' : ''),
+          rangeB: rB + (isPromB ? ' (promedio)' : ''),
+          valueA: isPromA ? avgA : totalA,
+          valueB: isPromB ? avgB : totalB,
+          seriesA: isPromA ? [avgA] : rawSeriesA,
+          seriesB: isPromB ? [avgB] : rawSeriesB,
+          labelsA: isPromA ? [`Promedio (${keysA.length})`] : jornadaLabelsA,
+          labelsB: isPromB ? [`Promedio (${keysB.length})`] : jornadaLabelsB,
+        }
+      })
       await generateTeamH2HPDF(jobs, (pct, m) => { setProgress(pct); setMsg(m) }, pdfTheme)
     } catch (e) {
       console.error('PDF error:', e)

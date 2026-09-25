@@ -88,7 +88,7 @@ function computeSideSelection(allJornadas, torneos, sideTorneos, sideJIdx) {
 }
 
 function TeamH2HSide({
-  side, rows, allJornadas, torneos, metric, viewMode,
+  side, rows, allJornadas, torneos, metric, viewMode, aggMode, onAggModeChange,
   team, onTeamChange, sideTorneos, onTorneosChange, sideJIdx, onJIdxChange,
 }) {
   const allTeams = useMemo(() => (
@@ -102,10 +102,22 @@ function TeamH2HSide({
     onJIdxChange([])
   }
 
-  const value = teamValueForPeriod(rows, selectedKeys, sideTorneos, metric, team)
-  const valsByJ = teamValueByJornada(rows, selectedKeys, sideTorneos, metric, team)
-  const displayLabels = formatJornadaLabels(selectedKeys)
+  const total = teamValueForPeriod(rows, selectedKeys, sideTorneos, metric, team)
+  const valsByJRaw = teamValueByJornada(rows, selectedKeys, sideTorneos, metric, team)
+  const jornadaLabelsRaw = formatJornadaLabels(selectedKeys)
+  const isPromedio = aggMode === 'promedio'
+  const promedioVal = selectedKeys.length ? total / selectedKeys.length : 0
+
+  const value = isPromedio ? promedioVal : total
+  const valsByJ = isPromedio ? [promedioVal] : valsByJRaw
+  const displayLabels = isPromedio ? [`Promedio (${selectedKeys.length})`] : jornadaLabelsRaw
   const color = side === 'A' ? RED : GOLD
+
+  const aggBtnStyle = (active) => ({
+    padding: '7px 12px', border: 'none', fontSize: 12, cursor: 'pointer',
+    fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: 0.5,
+    background: active ? color : 'var(--s2)', color: active ? '#111' : 'var(--gray3)',
+  })
 
   return (
     <div style={{ flex: 1, minWidth: 320 }}>
@@ -126,10 +138,14 @@ function TeamH2HSide({
           <TorneoFilter torneos={torneos} active={sideTorneos.length ? sideTorneos : torneos} onChange={handleTorneoChange} />
         )}
         <JornadaFilter jornadas={formatJornadaLabels(sideJornadas)} active={effectiveJIdx} onChange={onJIdxChange} />
+        <div style={{ display: 'flex', border: `1px solid ${color}`, borderRadius: 4, overflow: 'hidden' }}>
+          <button onClick={() => onAggModeChange('jornadas')} style={aggBtnStyle(!isPromedio)}>Jornadas</button>
+          <button onClick={() => onAggModeChange('promedio')} style={aggBtnStyle(isPromedio)}>Promedio</button>
+        </div>
       </div>
 
       <div style={{ background: '#1a1a1a', border: `1px solid ${color}`, borderRadius: 6, padding: '16px 20px', textAlign: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>{metric}</div>
+        <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>{metric}{isPromedio ? ' (promedio)' : ''}</div>
         <div style={{ fontSize: 40, fontWeight: 900, fontFamily: "'Barlow Condensed', sans-serif", color }}>{value.toFixed(2)}</div>
       </div>
 
@@ -138,7 +154,7 @@ function TeamH2HSide({
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#1a1a1a' }}>
-                <th style={{ textAlign: 'left', padding: '6px 12px', fontSize: 9, color: 'var(--gray2)', letterSpacing: 1, textTransform: 'uppercase' }}>Jornada</th>
+                <th style={{ textAlign: 'left', padding: '6px 12px', fontSize: 9, color: 'var(--gray2)', letterSpacing: 1, textTransform: 'uppercase' }}>{isPromedio ? 'Periodo' : 'Jornada'}</th>
                 <th style={{ textAlign: 'right', padding: '6px 12px', fontSize: 9, color: 'var(--gray2)', letterSpacing: 1, textTransform: 'uppercase' }}>{metric}</th>
               </tr>
             </thead>
@@ -179,6 +195,8 @@ function TeamHeadToHead({ rows, allJornadas, torneos, metrics, metric }) {
   const [torneosB, setTorneosB] = useState([])
   const [jIdxB, setJIdxB] = useState([])
   const [viewMode, setViewMode] = useState('chart')
+  const [aggModeA, setAggModeA] = useState('jornadas')
+  const [aggModeB, setAggModeB] = useState('jornadas')
 
   React.useEffect(() => {
     if (!teamB && allTeams.length) {
@@ -195,13 +213,14 @@ function TeamHeadToHead({ rows, allJornadas, torneos, metrics, metric }) {
         <Switch checked={viewMode === 'table'} onChange={v => setViewMode(v ? 'table' : 'chart')} label="Ver tabla" />
         <TeamH2HPDFBuilder
           rows={rows} metrics={metrics} allJornadas={allJornadas} torneos={torneos}
-          teamA={teamA} torneosA={torneosA} jIdxA={jIdxA}
-          teamB={teamB} torneosB={torneosB} jIdxB={jIdxB}
+          teamA={teamA} torneosA={torneosA} jIdxA={jIdxA} aggModeA={aggModeA}
+          teamB={teamB} torneosB={torneosB} jIdxB={jIdxB} aggModeB={aggModeB}
         />
       </div>
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <TeamH2HSide
           side="A" rows={rows} allJornadas={allJornadas} torneos={torneos} metric={metric} viewMode={viewMode}
+          aggMode={aggModeA} onAggModeChange={setAggModeA}
           team={teamA} onTeamChange={setTeamA} sideTorneos={torneosA} onTorneosChange={setTorneosA} sideJIdx={jIdxA} onJIdxChange={setJIdxA}
         />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300, padding: '0 4px' }}>
@@ -213,6 +232,7 @@ function TeamHeadToHead({ rows, allJornadas, torneos, metrics, metric }) {
         </div>
         <TeamH2HSide
           side="B" rows={rows} allJornadas={allJornadas} torneos={torneos} metric={metric} viewMode={viewMode}
+          aggMode={aggModeB} onAggModeChange={setAggModeB}
           team={teamB} onTeamChange={setTeamB} sideTorneos={torneosB} onTorneosChange={setTorneosB} sideJIdx={jIdxB} onJIdxChange={setJIdxB}
         />
       </div>
