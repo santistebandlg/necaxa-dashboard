@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import useSheetData, { processJugadores, processColectivo, jKey, jParts, formatJornadaLabels, sortJornadaKeysByDate, abbreviateJornada } from './hooks/useSheetData'
 import { Header, Sidebar, JornadaFilter, TorneoFilter, Loading, ErrorState } from './components/UI'
 import ColectivoPanel from './components/ColectivoPanel'
@@ -15,6 +15,19 @@ function Dashboard() {
   const [sbOpen,    setSbOpen]    = useState(true)
   const [current,   setCurrent]   = useState('colectivo')
   const [activeTorneos, setActiveTorneos] = useState([])
+  const [torneoDefaulted, setTorneoDefaulted] = useState(false)
+
+  // Al cargar los datos, deja seleccionado por defecto solo el torneo más
+  // reciente (según jornadas, que ya vienen ordenadas cronológicamente),
+  // en vez de "todos". Solo se aplica una vez — si el usuario cambia la
+  // selección manualmente después, no se le vuelve a pisar.
+  useEffect(() => {
+    if (!torneoDefaulted && jornadas.length) {
+      const latestTorneo = jParts(jornadas[jornadas.length - 1]).torneo
+      if (latestTorneo) setActiveTorneos([latestTorneo])
+      setTorneoDefaulted(true)
+    }
+  }, [jornadas, torneoDefaulted])
   const [activeJ,   setActiveJ]   = useState([]) // shared across all panels
 
   // Extract unique torneos from ALL data sources
