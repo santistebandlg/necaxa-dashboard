@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react'
 import { Bar, Scatter } from 'react-chartjs-2'
 import { RED, GOLD, WHT, GRID } from '../utils/chartUtils'
-import { jKey, formatJornadaLabels, sortJornadaKeysByDate } from '../hooks/useSheetData'
+import { jKey, jParts, formatJornadaLabels, sortJornadaKeysByDate } from '../hooks/useSheetData'
 import RankingsPDFBuilder from './RankingsPDFExport'
+import { TorneoFilter, JornadaFilter } from './UI'
 
 const NECAXA = 'Necaxa'
 
@@ -54,11 +55,129 @@ function Switch({ checked, onChange, label }) {
 }
 
 // ── Ranking chart ─────────────────────────────────────────────
+// ── Frente a frente de equipos ──────────────────────────────────
+function teamValueForPeriod(rows, jornadaKeys, torneoList, metric, team) {
+  let sum = 0
+  rows.forEach(r => {
+    if (jornadaKeys?.length && !jornadaKeys.includes(jKey(r.torneo, r.jornada))) return
+    if (torneoList?.length && !torneoList.includes(r.torneo)) return
+    if ((r.equipo || r.Equipo) !== team) return
+    sum += (r[metric] || 0)
+  })
+  return sum
+}
+
+function teamValueByJornada(rows, jornadaKeys, torneoList, metric, team) {
+  const scoped = jornadaKeys?.length ? jornadaKeys : []
+  return scoped.map(j => {
+    const row = rows.find(r => jKey(r.torneo, r.jornada) === j && (r.equipo || r.Equipo) === team)
+    return row ? (row[metric] || 0) : 0
+  })
+}
+
+function TeamH2HSide({ side, rows, allJornadas, torneos, metric, team, onTeamChange }) {
+  const [activeTorneos, setActiveTorneos] = useState([])
+  const [activeJIdx, setActiveJIdx] = useState([])
+
+  const allTeams = useMemo(() => (
+    [...new Set(rows.map(r => r.equipo || r.Equipo).filter(Boolean))].sort()
+  ), [rows])
+
+  const sideJornadas = useMemo(() => {
+    if (!activeTorneos.length || activeTorneos.length === torneos.length) return allJornadas
+    return allJornadas.filter(k => activeTorneos.includes(jParts(k).torneo))
+  }, [allJornadas, activeTorneos, torneos])
+
+  const effectiveJIdx = activeJIdx.length ? activeJIdx : sideJornadas.map((_, i) => i)
+  const selectedKeys = effectiveJIdx.map(i => sideJornadas[i]).filter(Boolean)
+
+  const handleTorneoChange = (t) => {
+    setActiveTorneos(t.length === torneos.length ? [] : t)
+    setActiveJIdx([])
+  }
+
+  const value = teamValueForPeriod(rows, selectedKeys, activeTorneos, metric, team)
+  const valsByJ = teamValueByJornada(rows, selectedKeys, activeTorneos, metric, team)
+  const displayLabels = formatJornadaLabels(selectedKeys)
+  const color = side === 'A' ? RED : GOLD
+
+  return (
+    <div style={{ flex: 1, minWidth: 320 }}>
+      <select
+        value={team} onChange={e => onTeamChange(e.target.value)}
+        style={{
+          background: '#111', border: `1px solid ${color}`, borderRadius: 4,
+          color, padding: '7px 12px', fontSize: 13, fontWeight: 700,
+          fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 0.5, cursor: 'pointer',
+          width: '100%', marginBottom: 10,
+        }}
+      >
+        {allTeams.map(t => <option key={t} value={t}>{t}</option>)}
+      </select>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        {torneos.length > 0 && (
+          <TorneoFilter torneos={torneos} active={activeTorneos.length ? activeTorneos : torneos} onChange={handleTorneoChange} />
+        )}
+        <JornadaFilter jornadas={displayLabels} active={effectiveJIdx} onChange={setActiveJIdx} />
+      </div>
+
+      <div style={{ background: '#1a1a1a', border: `1px solid ${color}`, borderRadius: 6, padding: '16px 20px', textAlign: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>{metric}</div>
+        <div style={{ fontSize: 40, fontWeight: 900, fontFamily: "'Barlow Condensed', sans-serif", color }}>{value.toFixed(2)}</div>
+      </div>
+
+      <div style={{ height: 200 }}>
+        <Bar
+          data={{ labels: displayLabels, datasets: [{ data: valsByJ, backgroundColor: color, borderRadius: 3, _barLabels: true }] }}
+          options={{
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { grid: GRID }, y: { grid: GRID, beginAtZero: true } },
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function TeamHeadToHead({ rows, allJornadas, torneos, metric }) {
+  const allTeams = useMemo(() => (
+    [...new Set(rows.map(r => r.equipo || r.Equipo).filter(Boolean))].sort()
+  ), [rows])
+  const [teamA, setTeamA] = useState(NECAXA)
+  const [teamB, setTeamB] = useState('')
+
+  React.useEffect(() => {
+    if (!teamB && allTeams.length) {
+      const firstOther = allTeams.find(t => t !== teamA)
+      if (firstOther) setTeamB(firstOther)
+    }
+  }, [allTeams, teamA, teamB])
+
+  if (!allTeams.length) return null
+
+  return (
+    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <TeamH2HSide side="A" rows={rows} allJornadas={allJornadas} torneos={torneos} metric={metric} team={teamA} onTeamChange={setTeamA} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300, padding: '0 4px' }}>
+        <span style={{
+          width: 40, height: 40, borderRadius: '50%', background: '#1c1c1c', border: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 13, color: 'var(--gray3)',
+        }}>VS</span>
+      </div>
+      <TeamH2HSide side="B" rows={rows} allJornadas={allJornadas} torneos={torneos} metric={metric} team={teamB} onTeamChange={setTeamB} />
+    </div>
+  )
+}
+
 function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
   const metrics    = useMetrics(rows)
   const [metric, setMetric]   = useState(metrics[0] || '')
   const [mode, setMode]       = useState('total') // total | promedio
   const [showJornada, setShowJornada] = useState(false) // false=agregado, true=por jornada
+  const [showH2H, setShowH2H] = useState(false) // frente a frente de equipos
   const [compareTeam, setCompareTeam] = useState('') // '' = ninguno
   const [viewMode, setViewMode]       = useState('chart') // chart | table
   const [sortDir, setSortDir]         = useState('desc')
@@ -67,6 +186,14 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
   React.useEffect(() => { if (metrics.length && !metrics.includes(metric)) setMetric(metrics[0]) }, [metrics])
 
   // ── Vista agregada por equipo ──────────────────────────────
+  const fullJornadas = useMemo(() => sortJornadaKeysByDate(
+    [...new Set(rows.map(r => jKey(r.torneo, r.jornada)).filter(Boolean))],
+    rows
+  ), [rows])
+  const rowsTorneos = useMemo(() => (
+    [...new Set(rows.map(r => r.torneo).filter(Boolean))].sort()
+  ), [rows])
+
   const aggregated = useMemo(() => {
     const teams = aggregateByTeam(rows, labels, activeTorneos, metric)
     return teams.map(t => ({
@@ -155,8 +282,9 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
         <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
         {/* Vista agregada / por jornada */}
         <div style={{ display: 'flex', gap: 4 }}>
-          <button onClick={() => setShowJornada(false)} style={btnStyle(!showJornada)}>Ranking general</button>
-          <button onClick={() => setShowJornada(true)}  style={btnStyle(showJornada)}>Evolución</button>
+          <button onClick={() => { setShowJornada(false); setShowH2H(false) }} style={btnStyle(!showJornada && !showH2H)}>Ranking general</button>
+          <button onClick={() => { setShowJornada(true); setShowH2H(false) }}  style={btnStyle(showJornada && !showH2H)}>Evolución</button>
+          <button onClick={() => setShowH2H(true)} style={btnStyle(showH2H)}>Frente a Frente</button>
         </div>
         <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
         {/* Metric selector */}
@@ -172,31 +300,33 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
           {metrics.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
 
-        <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
-        {/* Comparar con otro equipo */}
-        <select
-          value={compareTeam}
-          onChange={e => setCompareTeam(e.target.value)}
-          style={{
-            background: '#111', border: `1px solid ${compareTeam ? GOLD : 'var(--border)'}`, borderRadius: 4,
-            color: compareTeam ? GOLD : 'var(--white)', padding: '5px 10px', fontSize: 12,
-            fontFamily: "'Barlow', sans-serif", cursor: 'pointer', maxWidth: 200,
-          }}
-        >
-          <option value="">Comparar con...</option>
-          {aggregated.filter(t => t.equipo !== NECAXA).map(t => (
-            <option key={t.equipo} value={t.equipo}>{t.equipo}</option>
-          ))}
-        </select>
+        {!showH2H && <>
+          <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
+          {/* Comparar con otro equipo */}
+          <select
+            value={compareTeam}
+            onChange={e => setCompareTeam(e.target.value)}
+            style={{
+              background: '#111', border: `1px solid ${compareTeam ? GOLD : 'var(--border)'}`, borderRadius: 4,
+              color: compareTeam ? GOLD : 'var(--white)', padding: '5px 10px', fontSize: 12,
+              fontFamily: "'Barlow', sans-serif", cursor: 'pointer', maxWidth: 200,
+            }}
+          >
+            <option value="">Comparar con...</option>
+            {aggregated.filter(t => t.equipo !== NECAXA).map(t => (
+              <option key={t.equipo} value={t.equipo}>{t.equipo}</option>
+            ))}
+          </select>
+        </>}
 
-        {!showJornada && <>
+        {!showJornada && !showH2H && <>
           <div style={{ width: 1, height: 18, background: 'var(--border)' }} />
           <Switch checked={viewMode === 'table'} onChange={v => setViewMode(v ? 'table' : 'chart')} label="Ver tabla" />
         </>}
       </div>
 
       {/* Necaxa badge + equipo comparado */}
-      {!showJornada && (necaxaData || compareData) && (
+      {!showJornada && !showH2H && (necaxaData || compareData) && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
           {necaxaData && (
             <div style={{ background: '#1a1a1a', border: `1px solid ${RED}`, borderRadius: 6, padding: '10px 20px', display: 'flex', gap: 16, alignItems: 'center' }}>
@@ -236,7 +366,7 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
       )}
 
       {/* Chart / Tabla */}
-      {!showJornada ? (
+      {!showH2H && (!showJornada ? (
         viewMode === 'table' ? (
           <div style={{ border: '1px solid var(--border)', borderRadius: 4, maxWidth: 640 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -355,6 +485,10 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
             </div>
           </div>
         </div>
+      ))}
+
+      {showH2H && (
+        <TeamHeadToHead rows={rows} allJornadas={fullJornadas} torneos={rowsTorneos} metric={metric} />
       )}
     </div>
   )
