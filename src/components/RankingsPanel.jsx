@@ -215,6 +215,7 @@ function TeamHeadToHead({ rows, allJornadas, torneos, metrics, metric }) {
           rows={rows} metrics={metrics} allJornadas={allJornadas} torneos={torneos}
           teamA={teamA} torneosA={torneosA} jIdxA={jIdxA} aggModeA={aggModeA}
           teamB={teamB} torneosB={torneosB} jIdxB={jIdxB} aggModeB={aggModeB}
+          viewMode={viewMode}
         />
       </div>
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>

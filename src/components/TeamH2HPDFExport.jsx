@@ -69,8 +69,48 @@ async function barImage(labels, values, color, width, height, theme) {
   }, width, height)
 }
 
+// ── Tarjeta con tabla jornada/valor (para el modo "tabla" por jornadas) ──
+function drawSideTableCard(ctx, x0, y, w, h, labels, values, color, theme) {
+  ctx.fillStyle = theme.cardBg
+  roundRect(ctx, x0, y, w, h, 4)
+  ctx.fill()
+  ctx.strokeStyle = theme.cardBorder
+  ctx.lineWidth = 1
+  ctx.stroke()
+
+  const padX = 16, rowH = 28, headH = 30
+  ctx.save()
+  roundRect(ctx, x0, y, w, h, 4)
+  ctx.clip()
+
+  ctx.fillStyle = theme.headerBg === 'transparent' ? theme.cardBg : theme.headerBg
+  ctx.fillRect(x0, y, w, headH)
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'left'
+  ctx.fillStyle = theme.tickColor || theme.textMuted
+  ctx.font = `600 12px "Barlow Condensed", "Arial Narrow", sans-serif`
+  ctx.fillText('JORNADA', x0 + padX, y + headH / 2)
+  ctx.textAlign = 'right'
+  ctx.fillText('VALOR', x0 + w - padX, y + headH / 2)
+
+  labels.forEach((lbl, i) => {
+    const ry = y + headH + i * rowH
+    if (ry > y + h) return
+    if (i % 2 === 1) { ctx.fillStyle = theme.tableZebra || 'rgba(255,255,255,0.03)'; ctx.fillRect(x0, ry, w, rowH) }
+    ctx.textAlign = 'left'
+    ctx.fillStyle = theme.textFaint
+    ctx.font = `500 13px "Barlow", sans-serif`
+    ctx.fillText(lbl, x0 + padX, ry + rowH / 2)
+    ctx.textAlign = 'right'
+    ctx.fillStyle = color
+    ctx.font = `700 14px "Barlow", sans-serif`
+    ctx.fillText((values[i] ?? 0).toFixed(2), x0 + w - padX, ry + rowH / 2)
+  })
+  ctx.restore()
+}
+
 // ── Dibujo de una página por métrica ────────────────────────────────────
-async function drawH2HMetricPage(ctx, params, theme) {
+async function drawH2HMetricPage(ctx, params, theme, asTable) {
   const { metric, teamA, rangeA, valueA, seriesA, labelsA, teamB, rangeB, valueB, seriesB, labelsB } = params
   const PAD = 40, HEADER_H = 90
 
@@ -123,10 +163,16 @@ async function drawH2HMetricPage(ctx, params, theme) {
   ctx.lineWidth = 2
   ctx.beginPath(); ctx.moveTo(halfW, HEADER_H + 20); ctx.lineTo(halfW, DH - 20); ctx.stroke()
 
-  // Gráficas
+  // Gráficas o tablas, según el modo elegido en pantalla
   const chartY = HEADER_H + 240
   const chartH = DH - chartY - 30
   const chartW = halfW - PAD * 2
+
+  if (asTable) {
+    drawSideTableCard(ctx, PAD, chartY, chartW, chartH, labelsA, seriesA, RED, theme)
+    drawSideTableCard(ctx, halfW + PAD, chartY, chartW, chartH, labelsB, seriesB, GOLD, theme)
+    return
+  }
 
   const imgA = await loadImage(await barImage(labelsA, seriesA, RED, chartW * (W / DW), chartH * (W / DW), theme)).catch(() => null)
   const imgB = await loadImage(await barImage(labelsB, seriesB, GOLD, chartW * (W / DW), chartH * (W / DW), theme)).catch(() => null)
@@ -144,7 +190,74 @@ async function drawH2HMetricPage(ctx, params, theme) {
   drawCard(halfW, imgB)
 }
 
-export async function generateTeamH2HPDF(jobs, onProgress, themeMode = 'dark') {
+// ── Página combinada: todas las métricas en una sola tabla (modo Promedio + tabla) ──
+function drawH2HCombinedTablePage(ctx, { teamA, teamB, rangeA, rangeB, rows, pageLabel }, theme) {
+  const PAD = 40, HEADER_H = 90
+
+  ctx.fillStyle = theme.pageBg
+  ctx.fillRect(0, 0, DW, DH)
+  ctx.fillStyle = theme.headerBg
+  ctx.fillRect(0, 0, DW, HEADER_H)
+  if (theme.headerLine !== 'transparent') {
+    ctx.strokeStyle = theme.headerLine
+    ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(0, HEADER_H - 2); ctx.lineTo(DW, HEADER_H - 2); ctx.stroke()
+  }
+  ctx.fillStyle = theme.accent
+  ctx.fillRect(0, HEADER_H - 3, DW, 3)
+
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'left'
+  ctx.fillStyle = theme.textMuted
+  ctx.font = `500 18px "Barlow", sans-serif`
+  ctx.fillText('FRENTE A FRENTE — EQUIPOS · PROMEDIO', PAD, HEADER_H * 0.32)
+  ctx.fillStyle = theme.textTitle
+  ctx.font = `900 36px "Barlow Condensed", "Arial Narrow", sans-serif`
+  ctx.fillText(`${teamA.toUpperCase()} vs ${teamB.toUpperCase()}${pageLabel ? ` — ${pageLabel}` : ''}`, PAD, HEADER_H * 0.75)
+
+  const tableY = HEADER_H + 30
+  const tableW = DW - PAD * 2
+  const headH = 40, rowH = 40
+  const colMetricW = tableW * 0.5
+  const colValW = (tableW - colMetricW) / 2
+
+  ctx.fillStyle = theme.tableHeadBg || theme.cardBg
+  ctx.fillRect(PAD, tableY, tableW, headH)
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'left'
+  ctx.fillStyle = theme.tickColor || theme.textMuted
+  ctx.font = `600 14px "Barlow Condensed", "Arial Narrow", sans-serif`
+  ctx.fillText('MÉTRICA', PAD + 16, tableY + headH / 2)
+  ctx.textAlign = 'center'
+  ctx.fillStyle = RED
+  ctx.fillText(`${teamA.toUpperCase()} (${rangeA})`, PAD + colMetricW + colValW / 2, tableY + headH / 2)
+  ctx.fillStyle = GOLD
+  ctx.fillText(`${teamB.toUpperCase()} (${rangeB})`, PAD + colMetricW + colValW * 1.5, tableY + headH / 2)
+
+  ctx.strokeStyle = theme.headerLine !== 'transparent' ? theme.headerLine : theme.cardBorder
+  ctx.lineWidth = 1
+  ctx.strokeRect(PAD, tableY, tableW, headH + rows.length * rowH)
+
+  rows.forEach((r, i) => {
+    const ry = tableY + headH + i * rowH
+    if (i % 2 === 1) { ctx.fillStyle = theme.tableZebra || 'rgba(255,255,255,0.03)'; ctx.fillRect(PAD, ry, tableW, rowH) }
+    ctx.textAlign = 'left'
+    ctx.fillStyle = theme.textBody || theme.textTitle
+    ctx.font = `500 15px "Barlow", sans-serif`
+    ctx.fillText(r.metric, PAD + 16, ry + rowH / 2)
+
+    const better = r.valueA === r.valueB ? null : (r.valueA > r.valueB ? 'A' : 'B')
+    ctx.textAlign = 'center'
+    ctx.fillStyle = RED
+    ctx.font = `${better === 'A' ? '900' : '600'} 16px "Barlow Condensed", "Arial Narrow", sans-serif`
+    ctx.fillText(r.valueA.toFixed(2) + (better === 'A' ? ' ★' : ''), PAD + colMetricW + colValW / 2, ry + rowH / 2)
+    ctx.fillStyle = GOLD
+    ctx.font = `${better === 'B' ? '900' : '600'} 16px "Barlow Condensed", "Arial Narrow", sans-serif`
+    ctx.fillText(r.valueB.toFixed(2) + (better === 'B' ? ' ★' : ''), PAD + colMetricW + colValW * 1.5, ry + rowH / 2)
+  })
+}
+
+export async function generateTeamH2HPDF(jobs, onProgress, themeMode = 'dark', asTable = false) {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [W, H], compress: true })
   const theme = getTheme(themeMode)
@@ -156,7 +269,7 @@ export async function generateTeamH2HPDF(jobs, onProgress, themeMode = 'dark') {
     canvas.height = H
     const ctx = canvas.getContext('2d')
     ctx.scale(W / DW, H / DH)
-    await drawH2HMetricPage(ctx, jobs[i], theme)
+    await drawH2HMetricPage(ctx, jobs[i], theme, asTable)
     const imgData = canvas.toDataURL('image/png')
     if (i > 0) doc.addPage([W, H], 'landscape')
     doc.addImage(imgData, 'PNG', 0, 0, W, H)
@@ -167,8 +280,39 @@ export async function generateTeamH2HPDF(jobs, onProgress, themeMode = 'dark') {
   doc.save(`Necaxa_FrenteAFrente_${safeA}_vs_${safeB}.pdf`)
 }
 
+// PDF consolidado: todas las métricas (ya colapsadas a un solo valor por
+// promedio) en una sola tabla, paginando si no caben en una página.
+export async function generateTeamH2HCombinedPDF({ teamA, teamB, rangeA, rangeB, rows }, onProgress, themeMode = 'dark') {
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [W, H], compress: true })
+  const theme = getTheme(themeMode)
+
+  const ROWS_PER_PAGE = 18
+  const pages = []
+  for (let i = 0; i < rows.length; i += ROWS_PER_PAGE) pages.push(rows.slice(i, i + ROWS_PER_PAGE))
+  if (!pages.length) pages.push([])
+
+  for (let i = 0; i < pages.length; i++) {
+    onProgress?.(Math.round((i / pages.length) * 100), `Página ${i + 1} de ${pages.length}...`)
+    const canvas = document.createElement('canvas')
+    canvas.width = W
+    canvas.height = H
+    const ctx = canvas.getContext('2d')
+    ctx.scale(W / DW, H / DH)
+    const pageLabel = pages.length > 1 ? `${i + 1}/${pages.length}` : ''
+    drawH2HCombinedTablePage(ctx, { teamA, teamB, rangeA, rangeB, rows: pages[i], pageLabel }, theme)
+    const imgData = canvas.toDataURL('image/png')
+    if (i > 0) doc.addPage([W, H], 'landscape')
+    doc.addImage(imgData, 'PNG', 0, 0, W, H)
+  }
+  onProgress?.(100, 'Guardando...')
+  const safeA = (teamA || 'A').replace(/[^\p{L}\p{N}]+/gu, '_')
+  const safeB = (teamB || 'B').replace(/[^\p{L}\p{N}]+/gu, '_')
+  doc.save(`Necaxa_FrenteAFrente_Promedio_${safeA}_vs_${safeB}.pdf`)
+}
+
 // ── UI: selector de métricas + botón ─────────────────────────────────────
-export default function TeamH2HPDFBuilder({ rows, metrics, allJornadas, torneos, teamA, torneosA, jIdxA, aggModeA, teamB, torneosB, jIdxB, aggModeB }) {
+export default function TeamH2HPDFBuilder({ rows, metrics, allJornadas, torneos, teamA, torneosA, jIdxA, aggModeA, teamB, torneosB, jIdxB, aggModeB, viewMode }) {
   const [open, setOpen] = useState(false)
   const [selectedMetrics, setSelectedMetrics] = useState([])
   const [pdfTheme, setPdfTheme] = useState('dark')
@@ -194,26 +338,46 @@ export default function TeamH2HPDFBuilder({ rows, metrics, allJornadas, torneos,
       const rB = rangeLabel(keysB)
       const isPromA = aggModeA === 'promedio'
       const isPromB = aggModeB === 'promedio'
-      const jobs = selectedMetrics.map(metric => {
-        const totalA = teamValueForPeriod(rows, keysA, torneosA, metric, teamA)
-        const totalB = teamValueForPeriod(rows, keysB, torneosB, metric, teamB)
-        const rawSeriesA = teamValueByJornada(rows, keysA, torneosA, metric, teamA)
-        const rawSeriesB = teamValueByJornada(rows, keysB, torneosB, metric, teamB)
-        const avgA = keysA.length ? totalA / keysA.length : 0
-        const avgB = keysB.length ? totalB / keysB.length : 0
-        return {
-          metric, teamA, teamB,
-          rangeA: rA + (isPromA ? ' (promedio)' : ''),
-          rangeB: rB + (isPromB ? ' (promedio)' : ''),
-          valueA: isPromA ? avgA : totalA,
-          valueB: isPromB ? avgB : totalB,
-          seriesA: isPromA ? [avgA] : rawSeriesA,
-          seriesB: isPromB ? [avgB] : rawSeriesB,
-          labelsA: isPromA ? [`Promedio (${keysA.length})`] : jornadaLabelsA,
-          labelsB: isPromB ? [`Promedio (${keysB.length})`] : jornadaLabelsB,
-        }
-      })
-      await generateTeamH2HPDF(jobs, (pct, m) => { setProgress(pct); setMsg(m) }, pdfTheme)
+      const isTable = viewMode === 'table'
+
+      if (isTable && isPromA && isPromB) {
+        // Tabla + Promedio en ambos lados: una sola tabla con todas las métricas,
+        // en vez de una diapositiva por métrica.
+        const combinedRows = selectedMetrics.map(metric => {
+          const totalA = teamValueForPeriod(rows, keysA, torneosA, metric, teamA)
+          const totalB = teamValueForPeriod(rows, keysB, torneosB, metric, teamB)
+          return {
+            metric,
+            valueA: keysA.length ? totalA / keysA.length : 0,
+            valueB: keysB.length ? totalB / keysB.length : 0,
+          }
+        })
+        await generateTeamH2HCombinedPDF(
+          { teamA, teamB, rangeA: rA, rangeB: rB, rows: combinedRows },
+          (pct, m) => { setProgress(pct); setMsg(m) }, pdfTheme
+        )
+      } else {
+        const jobs = selectedMetrics.map(metric => {
+          const totalA = teamValueForPeriod(rows, keysA, torneosA, metric, teamA)
+          const totalB = teamValueForPeriod(rows, keysB, torneosB, metric, teamB)
+          const rawSeriesA = teamValueByJornada(rows, keysA, torneosA, metric, teamA)
+          const rawSeriesB = teamValueByJornada(rows, keysB, torneosB, metric, teamB)
+          const avgA = keysA.length ? totalA / keysA.length : 0
+          const avgB = keysB.length ? totalB / keysB.length : 0
+          return {
+            metric, teamA, teamB,
+            rangeA: rA + (isPromA ? ' (promedio)' : ''),
+            rangeB: rB + (isPromB ? ' (promedio)' : ''),
+            valueA: isPromA ? avgA : totalA,
+            valueB: isPromB ? avgB : totalB,
+            seriesA: isPromA ? [avgA] : rawSeriesA,
+            seriesB: isPromB ? [avgB] : rawSeriesB,
+            labelsA: isPromA ? [`Promedio (${keysA.length})`] : jornadaLabelsA,
+            labelsB: isPromB ? [`Promedio (${keysB.length})`] : jornadaLabelsB,
+          }
+        })
+        await generateTeamH2HPDF(jobs, (pct, m) => { setProgress(pct); setMsg(m) }, pdfTheme, isTable)
+      }
     } catch (e) {
       console.error('PDF error:', e)
       setMsg('Error — revisa la consola')
@@ -263,6 +427,11 @@ export default function TeamH2HPDFBuilder({ rows, metrics, allJornadas, torneos,
             })}
           </div>
 
+          <div style={{ fontSize: 11, color: 'var(--gray)', marginBottom: 10 }}>
+            {viewMode === 'table' && aggModeA === 'promedio' && aggModeB === 'promedio'
+              ? 'Se generará: 1 tabla con todas las métricas elegidas'
+              : `Se generará: 1 diapositiva por métrica, en ${viewMode === 'table' ? 'tabla' : 'gráfica'}`}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 3, overflow: 'hidden' }}>
               {[['dark', 'Oscuro'], ['light', 'Claro']].map(([v, label]) => (
