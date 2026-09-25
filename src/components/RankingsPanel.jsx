@@ -3,6 +3,7 @@ import { Bar, Scatter } from 'react-chartjs-2'
 import { RED, GOLD, WHT, GRID } from '../utils/chartUtils'
 import { jKey, jParts, formatJornadaLabels, sortJornadaKeysByDate } from '../hooks/useSheetData'
 import RankingsPDFBuilder from './RankingsPDFExport'
+import TeamH2HPDFBuilder from './TeamH2HPDFExport'
 import { TorneoFilter, JornadaFilter } from './UI'
 
 const NECAXA = 'Necaxa'
@@ -75,29 +76,34 @@ function teamValueByJornada(rows, jornadaKeys, torneoList, metric, team) {
   })
 }
 
-function TeamH2HSide({ side, rows, allJornadas, torneos, metric, team, onTeamChange }) {
-  const [activeTorneos, setActiveTorneos] = useState([])
-  const [activeJIdx, setActiveJIdx] = useState([])
+// Calcula, de forma pura (reutilizable desde el PDF), qué jornadas quedan
+// disponibles y seleccionadas para un lado dado su propio torneo/jornada.
+function computeSideSelection(allJornadas, torneos, sideTorneos, sideJIdx) {
+  const sideJornadas = (!sideTorneos.length || sideTorneos.length === torneos.length)
+    ? allJornadas
+    : allJornadas.filter(k => sideTorneos.includes(jParts(k).torneo))
+  const effectiveJIdx = sideJIdx.length ? sideJIdx : sideJornadas.map((_, i) => i)
+  const selectedKeys = effectiveJIdx.map(i => sideJornadas[i]).filter(Boolean)
+  return { sideJornadas, effectiveJIdx, selectedKeys }
+}
 
+function TeamH2HSide({
+  side, rows, allJornadas, torneos, metric, viewMode,
+  team, onTeamChange, sideTorneos, onTorneosChange, sideJIdx, onJIdxChange,
+}) {
   const allTeams = useMemo(() => (
     [...new Set(rows.map(r => r.equipo || r.Equipo).filter(Boolean))].sort()
   ), [rows])
 
-  const sideJornadas = useMemo(() => {
-    if (!activeTorneos.length || activeTorneos.length === torneos.length) return allJornadas
-    return allJornadas.filter(k => activeTorneos.includes(jParts(k).torneo))
-  }, [allJornadas, activeTorneos, torneos])
-
-  const effectiveJIdx = activeJIdx.length ? activeJIdx : sideJornadas.map((_, i) => i)
-  const selectedKeys = effectiveJIdx.map(i => sideJornadas[i]).filter(Boolean)
+  const { sideJornadas, effectiveJIdx, selectedKeys } = computeSideSelection(allJornadas, torneos, sideTorneos, sideJIdx)
 
   const handleTorneoChange = (t) => {
-    setActiveTorneos(t.length === torneos.length ? [] : t)
-    setActiveJIdx([])
+    onTorneosChange(t.length === torneos.length ? [] : t)
+    onJIdxChange([])
   }
 
-  const value = teamValueForPeriod(rows, selectedKeys, activeTorneos, metric, team)
-  const valsByJ = teamValueByJornada(rows, selectedKeys, activeTorneos, metric, team)
+  const value = teamValueForPeriod(rows, selectedKeys, sideTorneos, metric, team)
+  const valsByJ = teamValueByJornada(rows, selectedKeys, sideTorneos, metric, team)
   const displayLabels = formatJornadaLabels(selectedKeys)
   const color = side === 'A' ? RED : GOLD
 
@@ -117,9 +123,9 @@ function TeamH2HSide({ side, rows, allJornadas, torneos, metric, team, onTeamCha
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
         {torneos.length > 0 && (
-          <TorneoFilter torneos={torneos} active={activeTorneos.length ? activeTorneos : torneos} onChange={handleTorneoChange} />
+          <TorneoFilter torneos={torneos} active={sideTorneos.length ? sideTorneos : torneos} onChange={handleTorneoChange} />
         )}
-        <JornadaFilter jornadas={displayLabels} active={effectiveJIdx} onChange={setActiveJIdx} />
+        <JornadaFilter jornadas={formatJornadaLabels(sideJornadas)} active={effectiveJIdx} onChange={onJIdxChange} />
       </div>
 
       <div style={{ background: '#1a1a1a', border: `1px solid ${color}`, borderRadius: 6, padding: '16px 20px', textAlign: 'center', marginBottom: 12 }}>
@@ -127,26 +133,52 @@ function TeamH2HSide({ side, rows, allJornadas, torneos, metric, team, onTeamCha
         <div style={{ fontSize: 40, fontWeight: 900, fontFamily: "'Barlow Condensed', sans-serif", color }}>{value.toFixed(2)}</div>
       </div>
 
-      <div style={{ height: 200 }}>
-        <Bar
-          data={{ labels: displayLabels, datasets: [{ data: valsByJ, backgroundColor: color, borderRadius: 3, _barLabels: true }] }}
-          options={{
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { x: { grid: GRID }, y: { grid: GRID, beginAtZero: true } },
-          }}
-        />
-      </div>
+      {viewMode === 'table' ? (
+        <div style={{ border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#1a1a1a' }}>
+                <th style={{ textAlign: 'left', padding: '6px 12px', fontSize: 9, color: 'var(--gray2)', letterSpacing: 1, textTransform: 'uppercase' }}>Jornada</th>
+                <th style={{ textAlign: 'right', padding: '6px 12px', fontSize: 9, color: 'var(--gray2)', letterSpacing: 1, textTransform: 'uppercase' }}>{metric}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayLabels.map((lbl, i) => (
+                <tr key={i} style={{ borderTop: '1px solid var(--border)', background: i % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                  <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--gray3)' }}>{lbl}</td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontSize: 13, fontWeight: 700, color }}>{(valsByJ[i] ?? 0).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{ height: 200 }}>
+          <Bar
+            data={{ labels: displayLabels, datasets: [{ data: valsByJ, backgroundColor: color, borderRadius: 3, _barLabels: true }] }}
+            options={{
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { x: { grid: GRID }, y: { grid: GRID, beginAtZero: true } },
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
 
-function TeamHeadToHead({ rows, allJornadas, torneos, metric }) {
+function TeamHeadToHead({ rows, allJornadas, torneos, metrics, metric }) {
   const allTeams = useMemo(() => (
     [...new Set(rows.map(r => r.equipo || r.Equipo).filter(Boolean))].sort()
   ), [rows])
   const [teamA, setTeamA] = useState(NECAXA)
   const [teamB, setTeamB] = useState('')
+  const [torneosA, setTorneosA] = useState([])
+  const [jIdxA, setJIdxA] = useState([])
+  const [torneosB, setTorneosB] = useState([])
+  const [jIdxB, setJIdxB] = useState([])
+  const [viewMode, setViewMode] = useState('chart')
 
   React.useEffect(() => {
     if (!teamB && allTeams.length) {
@@ -158,16 +190,32 @@ function TeamHeadToHead({ rows, allJornadas, torneos, metric }) {
   if (!allTeams.length) return null
 
   return (
-    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <TeamH2HSide side="A" rows={rows} allJornadas={allJornadas} torneos={torneos} metric={metric} team={teamA} onTeamChange={setTeamA} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300, padding: '0 4px' }}>
-        <span style={{
-          width: 40, height: 40, borderRadius: '50%', background: '#1c1c1c', border: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 13, color: 'var(--gray3)',
-        }}>VS</span>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        <Switch checked={viewMode === 'table'} onChange={v => setViewMode(v ? 'table' : 'chart')} label="Ver tabla" />
+        <TeamH2HPDFBuilder
+          rows={rows} metrics={metrics} allJornadas={allJornadas} torneos={torneos}
+          teamA={teamA} torneosA={torneosA} jIdxA={jIdxA}
+          teamB={teamB} torneosB={torneosB} jIdxB={jIdxB}
+        />
       </div>
-      <TeamH2HSide side="B" rows={rows} allJornadas={allJornadas} torneos={torneos} metric={metric} team={teamB} onTeamChange={setTeamB} />
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <TeamH2HSide
+          side="A" rows={rows} allJornadas={allJornadas} torneos={torneos} metric={metric} viewMode={viewMode}
+          team={teamA} onTeamChange={setTeamA} sideTorneos={torneosA} onTorneosChange={setTorneosA} sideJIdx={jIdxA} onJIdxChange={setJIdxA}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300, padding: '0 4px' }}>
+          <span style={{
+            width: 40, height: 40, borderRadius: '50%', background: '#1c1c1c', border: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 13, color: 'var(--gray3)',
+          }}>VS</span>
+        </div>
+        <TeamH2HSide
+          side="B" rows={rows} allJornadas={allJornadas} torneos={torneos} metric={metric} viewMode={viewMode}
+          team={teamB} onTeamChange={setTeamB} sideTorneos={torneosB} onTorneosChange={setTorneosB} sideJIdx={jIdxB} onJIdxChange={setJIdxB}
+        />
+      </div>
     </div>
   )
 }
@@ -488,7 +536,7 @@ function RankingChart({ rows, labels, activeTorneos, title, sourceKey }) {
       ))}
 
       {showH2H && (
-        <TeamHeadToHead rows={rows} allJornadas={fullJornadas} torneos={rowsTorneos} metric={metric} />
+        <TeamHeadToHead rows={rows} allJornadas={fullJornadas} torneos={rowsTorneos} metric={metric} metrics={metrics} />
       )}
     </div>
   )
