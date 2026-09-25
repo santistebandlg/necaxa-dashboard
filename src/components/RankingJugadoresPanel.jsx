@@ -524,9 +524,236 @@ function PlayerScatterChart({ rows, labels, activeTorneos, highlightPlayers, pos
   )
 }
 
+// ── Frente a frente de jugadores (2 a 4) ────────────────────────
+const H2H_COLORS = [RED, GOLD, '#4a9eff', '#3fb950']
+
+function playerValueForMetric(rows, labels, activeTorneos, metric, playerKey) {
+  let sum = 0
+  const plainLabels = labels?.length ? labels.map(l => jParts(l).jornada) : labels
+  rows.forEach(r => {
+    if (plainLabels?.length && !plainLabels.includes(r.jornada)) return
+    if (activeTorneos?.length && !activeTorneos.includes(r.temporada)) return
+    if ((r.jugador + '|' + r.equipo) !== playerKey) return
+    sum += (r[metric] || 0)
+  })
+  return sum
+}
+
+function PlayerH2HPicker({ allPlayerKeys, selected, onChange }) {
+  const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState('')
+  const ref = React.useRef()
+  React.useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const filtered = allPlayerKeys.filter(p => p.label.toLowerCase().includes(search.toLowerCase()))
+  const toggle = (key) => {
+    if (selected.includes(key)) { onChange(selected.filter(x => x !== key)); return }
+    if (selected.length >= 4) return
+    onChange([...selected, key])
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div onClick={() => setOpen(o => !o)} style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        background: 'var(--s2)', border: `1px solid ${open ? 'var(--red)' : 'var(--border)'}`,
+        borderRadius: 3, padding: '8px 14px', cursor: 'pointer',
+        fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
+        fontSize: 13, letterSpacing: 1, color: 'var(--white)',
+        minWidth: 260, justifyContent: 'space-between',
+      }}>
+        <span>{selected.length === 0 ? 'Elige 2 a 4 jugadores' : `${selected.length} jugador${selected.length !== 1 ? 'es' : ''} elegido${selected.length !== 1 ? 's' : ''}`}</span>
+        <span style={{ color: 'var(--gray)', fontSize: 11 }}>{open ? '▴' : '▾'}</span>
+      </div>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 300,
+          background: '#1a1a1a', border: '1px solid var(--border)', borderRadius: 4,
+          boxShadow: '0 8px 24px rgba(0,0,0,.6)', overflow: 'hidden', width: 300,
+        }}>
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar jugador..."
+              style={{
+                width: '100%', boxSizing: 'border-box', background: '#111',
+                border: '1px solid var(--border)', borderRadius: 3, padding: '5px 8px',
+                color: 'var(--white)', fontSize: 12, fontFamily: "'Barlow', sans-serif",
+              }}
+            />
+          </div>
+          {selected.length >= 4 && (
+            <div style={{ padding: '6px 14px', fontSize: 11, color: GOLD, borderBottom: '1px solid var(--border)' }}>
+              Máximo 4 jugadores — quita uno para agregar otro
+            </div>
+          )}
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            {filtered.map(p => {
+              const isSel = selected.includes(p.key)
+              const idx = selected.indexOf(p.key)
+              const disabled = !isSel && selected.length >= 4
+              return (
+                <div key={p.key} onClick={() => !disabled && toggle(p.key)} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
+                  cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1,
+                  background: isSel ? `${H2H_COLORS[idx]}22` : 'none', borderBottom: '1px solid var(--border)',
+                }}>
+                  <div style={{
+                    width: 14, height: 14, borderRadius: 2, flexShrink: 0,
+                    border: `2px solid ${isSel ? H2H_COLORS[idx] : 'var(--gray2)'}`,
+                    background: isSel ? H2H_COLORS[idx] : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {isSel && <span style={{ color: '#111', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                  </div>
+                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: isSel ? 700 : 400, fontSize: 12, color: isSel ? H2H_COLORS[idx] : 'var(--gray3)' }}>{p.label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PlayerHeadToHead({ rows, labels, activeTorneos }) {
+  const metrics = useMetrics(rows)
+  const [selectedPlayers, setSelectedPlayers] = useState([])
+  const [selectedMetrics, setSelectedMetrics] = useState([])
+
+  const allPlayerKeys = useMemo(() => {
+    const seen = {}
+    rows.forEach(r => {
+      const key = r.jugador + '|' + r.equipo
+      if (!seen[key]) seen[key] = { key, label: `${r.jugador} (${r.equipoPeriodo || r.equipo})`, jugador: r.jugador }
+    })
+    return Object.values(seen).sort((a, b) => a.label.localeCompare(b.label))
+  }, [rows])
+
+  const toggleMetric = (m) => {
+    setSelectedMetrics(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])
+  }
+
+  const table = useMemo(() => {
+    if (selectedPlayers.length < 2 || !selectedMetrics.length) return null
+    return selectedMetrics.map(metric => {
+      const values = selectedPlayers.map(key => playerValueForMetric(rows, labels, activeTorneos, metric, key))
+      const max = Math.max(...values)
+      return { metric, values, max }
+    })
+  }, [rows, labels, activeTorneos, selectedPlayers, selectedMetrics])
+
+  const playerLabel = (key) => allPlayerKeys.find(p => p.key === key)?.label || key
+
+  return (
+    <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 6, padding: 20 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--white)', marginBottom: 16 }}>Frente a Frente</div>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: 20 }}>
+        <PlayerH2HPicker allPlayerKeys={allPlayerKeys} selected={selectedPlayers} onChange={setSelectedPlayers} />
+
+        <div style={{ background: '#161616', border: '1px solid var(--border)', borderRadius: 4, padding: '10px 14px', maxWidth: 500 }}>
+          <div style={{ fontSize: 10, color: 'var(--gray)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Métricas a evaluar</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 90, overflowY: 'auto' }}>
+            {metrics.map(m => {
+              const on = selectedMetrics.includes(m)
+              return (
+                <button key={m} onClick={() => toggleMetric(m)} style={{
+                  padding: '4px 10px', borderRadius: 3, border: `1px solid ${on ? RED : 'var(--border)'}`,
+                  background: on ? 'rgba(200,26,26,0.15)' : 'transparent', color: on ? '#fff' : 'var(--gray3)',
+                  fontSize: 11, fontFamily: "'Barlow', sans-serif", cursor: 'pointer', whiteSpace: 'nowrap',
+                }}>{m}</button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {selectedPlayers.length > 0 && selectedPlayers.length < 2 && (
+        <div style={{ color: 'var(--gray)', fontSize: 12 }}>Elige al menos un segundo jugador para comparar.</div>
+      )}
+      {selectedPlayers.length >= 2 && !selectedMetrics.length && (
+        <div style={{ color: 'var(--gray)', fontSize: 12 }}>Elige al menos una métrica a evaluar.</div>
+      )}
+
+      {table && (
+        <>
+          {/* Tabla comparativa */}
+          <div style={{ border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden', marginBottom: 20 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#1a1a1a' }}>
+                  <th style={{ textAlign: 'left', padding: '8px 14px', fontSize: 9, color: 'var(--gray2)', letterSpacing: 1, textTransform: 'uppercase' }}>Métrica</th>
+                  {selectedPlayers.map((key, i) => (
+                    <th key={key} style={{ textAlign: 'center', padding: '8px 14px', fontSize: 11, color: H2H_COLORS[i], fontWeight: 700 }}>
+                      {playerLabel(key)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {table.map((row, ri) => (
+                  <tr key={row.metric} style={{ borderTop: '1px solid var(--border)', background: ri % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                    <td style={{ padding: '8px 14px', fontSize: 12, color: 'var(--gray3)' }}>{row.metric}</td>
+                    {row.values.map((v, i) => {
+                      const isBest = v === row.max && row.max > 0
+                      return (
+                        <td key={i} style={{
+                          textAlign: 'center', padding: '8px 14px', fontSize: 13,
+                          fontWeight: isBest ? 800 : 500,
+                          color: isBest ? H2H_COLORS[i] : 'var(--white)',
+                        }}>
+                          {v.toFixed(2)}{isBest && ' ★'}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Gráficas por métrica */}
+          <div style={{ overflowX: 'auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+              {table.map(row => (
+                <div key={row.metric} style={{ background: '#161616', border: '1px solid var(--border)', borderRadius: 4, padding: 12 }}>
+                  <div style={{ fontSize: 11, color: 'var(--gray3)', marginBottom: 8, fontWeight: 600 }}>{row.metric}</div>
+                  <div style={{ height: 140 }}>
+                    <Bar
+                      data={{
+                        labels: selectedPlayers.map(k => playerLabel(k)),
+                        datasets: [{ data: row.values.map(v => +v.toFixed(2)), backgroundColor: selectedPlayers.map((_, i) => H2H_COLORS[i]), borderRadius: 3, _barLabels: true }],
+                      }}
+                      options={{
+                        indexAxis: 'y', maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                          x: { grid: GRID, beginAtZero: true },
+                          y: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } },
+                        },
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────
 export default function RankingJugadoresPanel({ raw, labels, activeTorneos }) {
   const rows = raw?.jugadoresliga || []
+  const [viewMode, setViewMode] = useState('rankings') // rankings | h2h
   const [highlightPlayers, setHighlightPlayers] = useState([])
   const [posFilter,  setPosFilter]  = useState([])
   const [edadMin,    setEdadMin]    = useState('')
@@ -545,26 +772,43 @@ export default function RankingJugadoresPanel({ raw, labels, activeTorneos }) {
   const edadOptions  = ['Todas', '16-20', '21-23', '24-26', '27-29', '30-32', '33+']
   const minsOptions  = ['Todos', '90+', '180+', '360+', '540+', '900+', '1350+']
 
+  const btnStyle = (active) => ({
+    padding: '5px 14px', borderRadius: 3, border: 'none', fontSize: 12, cursor: 'pointer',
+    fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: 0.5,
+    background: active ? 'var(--red)' : 'var(--s2)', color: active ? '#fff' : 'var(--gray3)',
+  })
+
   return (
     <div className="panel">
-      {/* Global filters */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <PosMultiSelect positions={allPositions} selected={posFilter} onChange={setPosFilter} />
-        <RangeFilter label="Edad" minVal={edadMin} maxVal={edadMax} onMinChange={setEdadMin} onMaxChange={setEdadMax} />
-        <RangeFilter label="Minutos" minVal={minsMin} maxVal={minsMax} onMinChange={setMinsMin} onMaxChange={setMinsMax} placeholder={['Mín', 'Máx']} />
-        <PlayerMultiSelect allPlayers={allPlayers} selected={highlightPlayers} onChange={setHighlightPlayers} />
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+        <button onClick={() => setViewMode('rankings')} style={btnStyle(viewMode === 'rankings')}>Rankings</button>
+        <button onClick={() => setViewMode('h2h')} style={btnStyle(viewMode === 'h2h')}>Frente a Frente</button>
       </div>
 
-      <PlayerRankingChart
-        rows={rows} labels={labels} activeTorneos={activeTorneos}
-        highlightPlayers={highlightPlayers}
-        posFilter={posFilter} edadMin={edadMin} edadMax={edadMax} minsMin={minsMin} minsMax={minsMax}
-      />
-      <PlayerScatterChart
-        rows={rows} labels={labels} activeTorneos={activeTorneos}
-        highlightPlayers={highlightPlayers}
-        posFilter={posFilter} edadMin={edadMin} edadMax={edadMax} minsMin={minsMin} minsMax={minsMax}
-      />
+      {viewMode === 'rankings' ? (
+        <>
+          {/* Global filters */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <PosMultiSelect positions={allPositions} selected={posFilter} onChange={setPosFilter} />
+            <RangeFilter label="Edad" minVal={edadMin} maxVal={edadMax} onMinChange={setEdadMin} onMaxChange={setEdadMax} />
+            <RangeFilter label="Minutos" minVal={minsMin} maxVal={minsMax} onMinChange={setMinsMin} onMaxChange={setMinsMax} placeholder={['Mín', 'Máx']} />
+            <PlayerMultiSelect allPlayers={allPlayers} selected={highlightPlayers} onChange={setHighlightPlayers} />
+          </div>
+
+          <PlayerRankingChart
+            rows={rows} labels={labels} activeTorneos={activeTorneos}
+            highlightPlayers={highlightPlayers}
+            posFilter={posFilter} edadMin={edadMin} edadMax={edadMax} minsMin={minsMin} minsMax={minsMax}
+          />
+          <PlayerScatterChart
+            rows={rows} labels={labels} activeTorneos={activeTorneos}
+            highlightPlayers={highlightPlayers}
+            posFilter={posFilter} edadMin={edadMin} edadMax={edadMax} minsMin={minsMin} minsMax={minsMax}
+          />
+        </>
+      ) : (
+        <PlayerHeadToHead rows={rows} labels={labels} activeTorneos={activeTorneos} />
+      )}
     </div>
   )
 }
